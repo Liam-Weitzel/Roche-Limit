@@ -1,0 +1,9 @@
+# Build outputs
+compile_commands.json
+libserver.so
+libsteam_api.so
+server
+
+# Dependencies
+.cache/
+.direnv/
