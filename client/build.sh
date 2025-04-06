@@ -48,7 +48,35 @@ INCLUDES="-I $COMMON_LIBS_DIR -I $LIBS_DIR -I $RAYLIB_SRC -I $RAYLIB_RLIGHTS -I 
 RAYLIB_LIBS="-L $RAYLIB_SRC -L $RAYLIB_SRC/rtext -lraylib"
 STEAM_LIBS=" -l steam_api -L $STEAM_LIB_DIR"
 SYSTEM_LIBS="-lGL -lm -lpthread -ldl -lrt -lX11"
-COMPILER_FLAGS="-Wl,-rpath,\$ORIGIN/ -fno-gnu-unique -Wno-format-security -Wno-write-strings -O0 -g"
+#Common flags
+COMPILER_FLAGS="\
+    -Wall \
+    -Wextra \
+    -pedantic \
+    -Werror \
+    -isystem $RAYLIB_SRC \
+    -isystem $RAYGUI_SRC \
+    -isystem $RRES_SRC \
+    -Wno-unused-parameter \
+    -Wno-unused-variable \
+    -Wno-unused-but-set-variable \
+    -Wno-unused-result \
+    -Wno-format-security \
+    -Wno-write-strings \
+    -Wno-missing-field-initializers \
+    -fno-gnu-unique \
+    -Wl,-rpath,\$ORIGIN/"
+#Debug flags
+COMPILER_FLAGS+="\
+    -Wno-error=cpp \
+    -fsanitize=undefined \
+    -fno-sanitize-recover=all \
+    -O0 -g"
+#Release flags
+# COMPILER_FLAGS+="\
+#     -O3 \
+#     -flto \
+#     -march=native \
 
 # Build raylib if not built
 if [ ! -f "$RAYLIB_SRC/libraylib.a" ]; then
