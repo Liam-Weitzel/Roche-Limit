@@ -4,32 +4,14 @@
 #include "utils_client.h"
 #include <cmath>
 
-// Const text
-const char *settingsGroupBoxText = "Settings";    // GROUPBOX: settingsGroupBox
-const char *musicSliderBarText = "Music";    // SLIDERBAR: musicSliderBar
-const char *sfxSliderBarText = "SFX";    // SLIDERBAR: sfxSliderBar
-const char *uiScaleSliderText = "UI Scale";    // SLIDER: uiScaleSlider
-const char *screenDropdownBoxText = "Windowed; Fullscreen";    // DROPDOWNBOX: screenDropdownBox
-const char *screenLabelText = "Screen";    // LABEL: screenLabel
-const char *LineText = "";
-const char *fpsValueBoxText = "FPS";
-const char *uiStyleSpinnerText = "UI Style";
-
-// Define controls variables
-bool uiStyleSpinnerEditMode = false;
-int uiStyleSpinnerValue = 0;            // Spinner: uiStyleSpinner
-float musicSliderBarValue = 0.0f;            // SliderBar: musicSliderBar
-float sfxSliderBarValue = 0.0f;            // SliderBar: sfxSliderBar
-bool fpsValueBoxEditMode = false;
-int fpsValueBoxValue = 0;            // ValueBOx: fpsValueBox
-float uiScaleSliderValue = 0.0f;            // Slider: uiScaleSlider
-bool screenDropdownBoxEditMode = false;
-int screenDropdownBoxActive = 0;            // DropdownBox: screenDropdownBox
-
-void DrawSettings() {
+void DrawSettingsMenu(GUI& state) {
+  if(!state.settingsMenu.active) return;
+  if(IsWindowResized()) state.settingsMenu.dirty = true;
+  if(state.settingsMenu.dirty) {
+    state.settingsMenu.dirty = false;
     float width = GetScreenWidth();
     float height = GetScreenHeight();
-    
+
     UIScale scale = CalculateUIScale();
 
     // Scale the base font size (12) with the UI
@@ -37,34 +19,32 @@ void DrawSettings() {
     GuiSetStyle(DEFAULT, TEXT_SIZE, scaledFontSize);
 
     // Define anchors
-    Vector2 anchor01 = { width/2, height/2 };
+    state.settingsMenu.anchor01 = { width/2, height/2 };
 
-    // Define controls rectangles
-    Rectangle layoutRecs[9] = {
-        { anchor01.x + ScaleSize(-96, scale.uniformScale), anchor01.y + ScaleSize(-88, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(184, scale.uniformScale) },    // GroupBox: settingsGroupBox
-        { anchor01.x + ScaleSize(-24, scale.uniformScale), anchor01.y + ScaleSize(40, scale.uniformScale), ScaleSize(80, scale.uniformScale), ScaleSize(24, scale.uniformScale) },    // Spinner: uiStyleSpinner
-        { anchor01.x + ScaleSize(-24, scale.uniformScale), anchor01.y + ScaleSize(-80, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) },    // SliderBar: musicSliderBar
-        { anchor01.x + ScaleSize(-24, scale.uniformScale), anchor01.y + ScaleSize(-56, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) },    // SliderBar: sfxSliderBar
-        { anchor01.x + ScaleSize(-24, scale.uniformScale), anchor01.y + ScaleSize(-24, scale.uniformScale), ScaleSize(72, scale.uniformScale), ScaleSize(24, scale.uniformScale) },    // ValueBOx: fpsValueBox
-        { anchor01.x + ScaleSize(-96, scale.uniformScale), anchor01.y + ScaleSize(-40, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(16, scale.uniformScale) },    // Line: Line
-        { anchor01.x + ScaleSize(-24, scale.uniformScale), anchor01.y + ScaleSize(72, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) },    // Slider: uiScaleSlider
-        { anchor01.x + ScaleSize(-24, scale.uniformScale), anchor01.y + ScaleSize(8, scale.uniformScale), ScaleSize(96, scale.uniformScale), ScaleSize(24, scale.uniformScale) },    // DropdownBox: screenDropdownBox
-        { anchor01.x + ScaleSize(-72, scale.uniformScale), anchor01.y + ScaleSize(8, scale.uniformScale), ScaleSize(56, scale.uniformScale), ScaleSize(24, scale.uniformScale) },    // Label: screenLabel
-    };
+    state.settingsMenu.layoutRecs[0] = { state.settingsMenu.anchor01.x + ScaleSize(-96, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(-88, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(184, scale.uniformScale) };    // GroupBox: settingsGroupBox
+    state.settingsMenu.layoutRecs[1] = { state.settingsMenu.anchor01.x + ScaleSize(-24, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(40, scale.uniformScale), ScaleSize(80, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // Spinner: uiStyleSpinner
+    state.settingsMenu.layoutRecs[2] = { state.settingsMenu.anchor01.x + ScaleSize(-24, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(-80, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // SliderBar: musicSliderBar
+    state.settingsMenu.layoutRecs[3] = { state.settingsMenu.anchor01.x + ScaleSize(-24, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(-56, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // SliderBar: sfxSliderBar
+    state.settingsMenu.layoutRecs[4] = { state.settingsMenu.anchor01.x + ScaleSize(-24, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(-24, scale.uniformScale), ScaleSize(72, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // ValueBOx: fpsValueBox
+    state.settingsMenu.layoutRecs[5] = { state.settingsMenu.anchor01.x + ScaleSize(-96, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(-40, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // Line: Line
+    state.settingsMenu.layoutRecs[6] = { state.settingsMenu.anchor01.x + ScaleSize(-24, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(72, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // Slider: uiScaleSlider
+    state.settingsMenu.layoutRecs[7] = { state.settingsMenu.anchor01.x + ScaleSize(-24, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(8, scale.uniformScale), ScaleSize(96, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // DropdownBox: screenDropdownBox
+    state.settingsMenu.layoutRecs[8] = { state.settingsMenu.anchor01.x + ScaleSize(-72, scale.uniformScale), state.settingsMenu.anchor01.y + ScaleSize(8, scale.uniformScale), ScaleSize(56, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // Label: screenLabel
+  }
 
-    DrawRectangle(layoutRecs[0].x, layoutRecs[0].y, layoutRecs[0].width, layoutRecs[0].height, GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+  DrawRectangle(state.settingsMenu.layoutRecs[0].x, state.settingsMenu.layoutRecs[0].y, state.settingsMenu.layoutRecs[0].width, state.settingsMenu.layoutRecs[0].height, GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
-    if (screenDropdownBoxEditMode) GuiLock();
+  if (state.settingsMenu.screenDropdownBoxEditMode) GuiLock();
 
-    GuiGroupBox(layoutRecs[0], settingsGroupBoxText);
-    if (GuiSpinner(layoutRecs[1], uiStyleSpinnerText, &uiStyleSpinnerValue, 0, 100, uiStyleSpinnerEditMode)) uiStyleSpinnerEditMode = !uiStyleSpinnerEditMode;
-    GuiSliderBar(layoutRecs[2], musicSliderBarText, NULL, &musicSliderBarValue, 0, 100);
-    GuiSliderBar(layoutRecs[3], sfxSliderBarText, NULL, &sfxSliderBarValue, 0, 100);
-    if (GuiValueBox(layoutRecs[4], fpsValueBoxText, &fpsValueBoxValue, 0, 100, fpsValueBoxEditMode)) fpsValueBoxEditMode = !fpsValueBoxEditMode;
-    GuiLine(layoutRecs[5], LineText);
-    GuiSlider(layoutRecs[6], uiScaleSliderText, NULL, &uiScaleSliderValue, 0, 100);
-    GuiLabel(layoutRecs[8], screenLabelText);
-    if (GuiDropdownBox(layoutRecs[7], screenDropdownBoxText, &screenDropdownBoxActive, screenDropdownBoxEditMode)) screenDropdownBoxEditMode = !screenDropdownBoxEditMode;
-    
-    GuiUnlock();
+  GuiGroupBox(state.settingsMenu.layoutRecs[0], state.settingsMenu.settingsGroupBoxText);
+  if (GuiSpinner(state.settingsMenu.layoutRecs[1], state.settingsMenu.uiStyleSpinnerText, &state.settingsMenu.uiStyleSpinnerValue, 0, 100, state.settingsMenu.uiStyleSpinnerEditMode)) state.settingsMenu.uiStyleSpinnerEditMode = !state.settingsMenu.uiStyleSpinnerEditMode;
+  GuiSliderBar(state.settingsMenu.layoutRecs[2], state.settingsMenu.musicSliderBarText, NULL, &state.settingsMenu.musicSliderBarValue, 0, 100);
+  GuiSliderBar(state.settingsMenu.layoutRecs[3], state.settingsMenu.sfxSliderBarText, NULL, &state.settingsMenu.sfxSliderBarValue, 0, 100);
+  if (GuiValueBox(state.settingsMenu.layoutRecs[4], state.settingsMenu.fpsValueBoxText, &state.settingsMenu.fpsValueBoxValue, 0, 100, state.settingsMenu.fpsValueBoxEditMode)) state.settingsMenu.fpsValueBoxEditMode = !state.settingsMenu.fpsValueBoxEditMode;
+  GuiLine(state.settingsMenu.layoutRecs[5], state.settingsMenu.LineText);
+  GuiSlider(state.settingsMenu.layoutRecs[6], state.settingsMenu.uiScaleSliderText, NULL, &state.settingsMenu.uiScaleSliderValue, 0, 100);
+  GuiLabel(state.settingsMenu.layoutRecs[8], state.settingsMenu.screenLabelText);
+  if (GuiDropdownBox(state.settingsMenu.layoutRecs[7], state.settingsMenu.screenDropdownBoxText, &state.settingsMenu.screenDropdownBoxActive, state.settingsMenu.screenDropdownBoxEditMode)) state.settingsMenu.screenDropdownBoxEditMode = !state.settingsMenu.screenDropdownBoxEditMode;
+
+  GuiUnlock();
 }
