@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
 project(client)
-include(CTest)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -13,23 +12,88 @@ set(CMAKE_INSTALL_RPATH "$ORIGIN")
 # Enable compilation database
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Symlink compilation database to parent if needed by LSP
-# execute_process(
-#     COMMAND ${CMAKE_COMMAND} -E create_symlink
-#     ${CMAKE_BINARY_DIR}/compile_commands.json
-#     ${CMAKE_SOURCE_DIR}/compile_commands.json
-# )
-
 # Add build type parameter with DEBUG as default
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
 endif()
 
-# Build raylib
+# Set OpenGL preference to GLVND
+if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+endif()
+
+# Platform options with defaults
+if(UNIX AND NOT APPLE)
+    # Linux-specific setup
+    option(USE_WAYLAND "Build with Wayland support" OFF)
+    option(USE_X11 "Build with X11 support" ON)
+
+    # Check for required packages based on options
+    if(USE_WAYLAND)
+        message(STATUS "Checking Wayland dependencies...")
+        
+        # Try to find pkg-config first
+        find_package(PkgConfig)
+        if(NOT PKG_CONFIG_FOUND)
+            message(STATUS "pkg-config not found - required for Wayland support")
+            message(STATUS "On Nix, add pkgconfig to your development environment")
+            set(USE_WAYLAND OFF)
+            set(USE_X11 ON)
+        else()
+            # If pkg-config is found, check for Wayland
+            pkg_check_modules(WAYLAND wayland-client wayland-protocols wayland-egl wayland-cursor xkbcommon libffi)
+            find_program(WAYLAND_SCANNER wayland-scanner)
+            
+            if(NOT WAYLAND_FOUND)
+                message(STATUS "Wayland libraries not found")
+                set(USE_WAYLAND OFF)
+                set(USE_X11 ON)
+            else()
+                link_directories(${WAYLAND_LIBRARY_DIRS})
+                include_directories(${WAYLAND_INCLUDE_DIRS})
+            endif()
+            
+            if(NOT WAYLAND_SCANNER)
+                message(STATUS "wayland-scanner not found")
+                set(USE_WAYLAND OFF)
+                set(USE_X11 ON)
+            endif()
+        endif()
+    endif()
+
+    if(USE_X11)
+        find_package(X11)
+        if(NOT X11_FOUND)
+            message(STATUS "X11 not found - building without X11 support")
+            set(USE_X11 OFF)
+        endif()
+    endif()
+
+    find_package(OpenGL)
+    find_package(Threads)
+endif()
+
+# Build raylib with platform-appropriate settings
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(PLATFORM "Desktop" CACHE STRING "Platform to build for." FORCE)
+set(USE_EXTERNAL_GLFW "OFF" CACHE STRING "Link raylib against system GLFW instead of embedded one" FORCE)
+
+# Configure GLFW based on platform
+if(UNIX AND NOT APPLE)
+    set(GLFW_BUILD_WAYLAND ${USE_WAYLAND} CACHE BOOL "Build GLFW with Wayland support" FORCE)
+    set(GLFW_BUILD_X11 ${USE_X11} CACHE BOOL "Build GLFW with X11 support" FORCE)
+else()
+    # Windows and MacOS don't need Wayland or X11
+    set(GLFW_BUILD_WAYLAND OFF CACHE BOOL "Build GLFW with Wayland support" FORCE)
+    set(GLFW_BUILD_X11 OFF CACHE BOOL "Build GLFW with X11 support" FORCE)
+endif()
+
+# Common raylib settings
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+set(OPENGL_VERSION "3.3" CACHE STRING "" FORCE)
 
+# Add raylib
 add_subdirectory(libs/raylib)
 
 # Create interface target for external libraries with warnings disabled
@@ -203,8 +267,6 @@ target_link_libraries(client_test PRIVATE
 )
 target_compile_options(client_test PRIVATE ${COMMON_COMPILE_OPTIONS})
 
-add_test(NAME ClientTests COMMAND client_test)
-
 # Create the main executable
 add_executable(client src/main.cpp)
 
@@ -254,47 +316,3 @@ add_custom_command(TARGET client POST_BUILD
 
 add_dependencies(client client_lib)
 add_dependencies(client_test client_lib)
-add_dependencies(prep_models client_lib)
-
-# Add custom target for running full build process
-add_custom_target(run
-    # First build and run prep_models
-    COMMAND ${CMAKE_COMMAND} --build . --target prep_models
-    COMMAND ${CMAKE_COMMAND} -E echo "Running prep_models..."
-    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR} ./prep_models
-    # Then build shared library
-    COMMAND ${CMAKE_COMMAND} --build . --target client_lib
-    # Then build and run tests
-    COMMAND ${CMAKE_COMMAND} --build . --target client_test
-    COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
-    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR} ./client_test
-    # Finally build and run the main executable
-    COMMAND ${CMAKE_COMMAND} --build . --target client
-    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR} ./client
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Running full build pipeline: prep models -> shared lib -> tests -> main executable"
-)
-
-add_custom_target(client_build_test
-    # First build and run prep_models
-    COMMAND ${CMAKE_COMMAND} --build . --target prep_models
-    COMMAND ${CMAKE_COMMAND} -E echo "Running prep_models..."
-    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR} ./prep_models
-    # Then build shared library
-    COMMAND ${CMAKE_COMMAND} --build . --target client_lib
-    # Then build and run tests
-    COMMAND ${CMAKE_COMMAND} --build . --target client_test
-    COMMAND ${CMAKE_COMMAND} -E echo "Running tests..."
-    COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_SOURCE_DIR} ./client_test
-    # Finally build the main executable
-    COMMAND ${CMAKE_COMMAND} --build . --target client
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Running build pipeline: prep models -> shared lib -> tests"
-)
-
-# Add hot reload target
-add_custom_target(hot
-    COMMAND ${CMAKE_COMMAND} --build . --target client_lib
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Hot reloading - rebuilding shared library only"
-)

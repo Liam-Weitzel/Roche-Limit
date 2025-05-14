@@ -1,3 +1,4 @@
+#include "raylib.h"
 #include "utils.h"
 #include "utils_client.h"
 #include <cmath>
@@ -8,6 +9,19 @@
 #include <stdlib.h>
 
 // g++ prep_models.cpp -o prep_models -I ./libs -I ../libs -I ./src/ -I ./libs/raylib/src/ -I ./libs/rres/src/ -L ./libs/raylib/src/ -lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -Wl,-rpath,\$ORIGIN/ -fno-gnu-unique -Wno-format-security -g -O0
+
+#ifdef _WIN32
+  const char* RRESPACKER_PATH = ".\\libs\\rrespacker\\rrespacker.exe";
+  const char* RESOURCE_CMD = "%s -o resources.rres --rrp resources.rrp";
+#elif __linux__
+  const char* RRESPACKER_PATH = "./libs/rrespacker/rrespacker";
+  const char* RESOURCE_CMD = "%s -o resources.rres --rrp resources.rrp";
+#elif __APPLE__
+  const char* RRESPACKER_PATH = "./libs/rrespacker/rrespacker.app";
+  const char* RESOURCE_CMD = "%s -o resources.rres --rrp resources.rrp";
+#else
+  #error "Unsupported platform"
+#endif
 
 #define MAX_MATERIAL_MAPS 12
 #define RL_MAX_SHADER_LOCATIONS 32
@@ -424,15 +438,15 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
   // Write transform matrix
   memcpy(current, &model.transform, sizeof(Matrix));
   current += sizeof(Matrix);
-  LOG_TRACE("After transform matrix: %zu bytes\n", current - buffer);
+  // LOG_TRACE("After transform matrix: %zu bytes\n", current - buffer);
 
   // Write counts
   memcpy(current, &model.meshCount, sizeof(int));
   current += sizeof(int);
-  LOG_TRACE("After mesh count: %zu bytes\n", current - buffer);
+  // LOG_TRACE("After mesh count: %zu bytes\n", current - buffer);
   memcpy(current, &model.materialCount, sizeof(int));
   current += sizeof(int);
-  LOG_TRACE("After material count: %zu bytes\n", current - buffer);
+  // LOG_TRACE("After material count: %zu bytes\n", current - buffer);
 
   // Write global flags
   unsigned char globalFlags = 0;
@@ -443,7 +457,7 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
   globalFlags |= (model.bindPose ? 16 : 0);
   memcpy(current, &globalFlags, sizeof(unsigned char));
   current += sizeof(unsigned char);
-  LOG_TRACE("After global flags: %zu bytes\n", current - buffer);
+  // LOG_TRACE("After global flags: %zu bytes\n", current - buffer);
 
   // Write meshes
   if (model.meshes) {
@@ -453,13 +467,13 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
       // Write counts
       memcpy(current, &mesh.vertexCount, sizeof(int));
       current += sizeof(int);
-      LOG_TRACE("After mesh %i vertex count: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After mesh %i vertex count: %zu bytes\n", i, current - buffer);
       memcpy(current, &mesh.triangleCount, sizeof(int));
       current += sizeof(int);
-      LOG_TRACE("After mesh %i triangle count: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After mesh %i triangle count: %zu bytes\n", i, current - buffer);
       memcpy(current, &mesh.boneCount, sizeof(int));
       current += sizeof(int);
-      LOG_TRACE("After mesh %i bone count: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After mesh %i bone count: %zu bytes\n", i, current - buffer);
 
       // Write mesh flags
       unsigned char meshFlags = 0;
@@ -472,7 +486,7 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
       meshFlags |= (mesh.indices ? 64 : 0);
       memcpy(current, &meshFlags, sizeof(unsigned char));
       current += sizeof(unsigned char);
-      LOG_TRACE("After mesh %i mesh flags: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After mesh %i mesh flags: %zu bytes\n", i, current - buffer);
 
       // Write animation flags
       unsigned char animFlags = 0;
@@ -483,7 +497,7 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
       animFlags |= (mesh.boneMatrices ? 16 : 0);
       memcpy(current, &animFlags, sizeof(unsigned char));
       current += sizeof(unsigned char);
-      LOG_TRACE("After mesh %i animation flags: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After mesh %i animation flags: %zu bytes\n", i, current - buffer);
 
       // Write vertex data
       if (mesh.vertexCount > 0) {
@@ -491,37 +505,37 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
           size_t size = sizeof(float) * mesh.vertexCount * 3;
           memcpy(current, mesh.vertices, size);
           current += size;
-          LOG_TRACE("After mesh %i vertices: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i vertices: %zu bytes\n", i, current - buffer);
         }
         if (mesh.texcoords) {
           size_t size = sizeof(float) * mesh.vertexCount * 2;
           memcpy(current, mesh.texcoords, size);
           current += size;
-          LOG_TRACE("After mesh %i texcoords: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i texcoords: %zu bytes\n", i, current - buffer);
         }
         if (mesh.texcoords2) {
           size_t size = sizeof(float) * mesh.vertexCount * 2;
           memcpy(current, mesh.texcoords2, size);
           current += size;
-          LOG_TRACE("After mesh %i texcoords2: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i texcoords2: %zu bytes\n", i, current - buffer);
         }
         if (mesh.normals) {
           size_t size = sizeof(float) * mesh.vertexCount * 3;
           memcpy(current, mesh.normals, size);
           current += size;
-          LOG_TRACE("After mesh %i normals: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i normals: %zu bytes\n", i, current - buffer);
         }
         if (mesh.tangents) {
           size_t size = sizeof(float) * mesh.vertexCount * 4;
           memcpy(current, mesh.tangents, size);
           current += size;
-          LOG_TRACE("After mesh %i tangents: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i tangents: %zu bytes\n", i, current - buffer);
         }
         if (mesh.colors) {
           size_t size = sizeof(unsigned char) * mesh.vertexCount * 4;
           memcpy(current, mesh.colors, size);
           current += size;
-          LOG_TRACE("After mesh %i colors: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i colors: %zu bytes\n", i, current - buffer);
         }
 
         // Write animation data
@@ -529,31 +543,31 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
           size_t size = sizeof(float) * mesh.vertexCount * 3;
           memcpy(current, mesh.animVertices, size);
           current += size;
-          LOG_TRACE("After mesh %i anim vertices: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i anim vertices: %zu bytes\n", i, current - buffer);
         }
         if (mesh.animNormals) {
           size_t size = sizeof(float) * mesh.vertexCount * 3;
           memcpy(current, mesh.animNormals, size);
           current += size;
-          LOG_TRACE("After mesh %i anim normals: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i anim normals: %zu bytes\n", i, current - buffer);
         }
         if (mesh.boneIds) {
           size_t size = sizeof(unsigned char) * mesh.vertexCount * 4;
           memcpy(current, mesh.boneIds, size);
           current += size;
-          LOG_TRACE("After mesh %i bone IDs: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i bone IDs: %zu bytes\n", i, current - buffer);
         }
         if (mesh.boneWeights) {
           size_t size = sizeof(float) * mesh.vertexCount * 4;
           memcpy(current, mesh.boneWeights, size);
           current += size;
-          LOG_TRACE("After mesh %i bone weights: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i bone weights: %zu bytes\n", i, current - buffer);
         }
         if (mesh.boneMatrices && mesh.boneCount > 0) {
           size_t size = sizeof(Matrix) * mesh.boneCount;
           memcpy(current, mesh.boneMatrices, size);
           current += size;
-          LOG_TRACE("After mesh %i boneMatrices: %zu bytes\n", i, current - buffer);
+          // LOG_TRACE("After mesh %i boneMatrices: %zu bytes\n", i, current - buffer);
         }
       }
 
@@ -562,7 +576,7 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
         size_t size = sizeof(unsigned short) * mesh.triangleCount * 3;
         memcpy(current, mesh.indices, size);
         current += size;
-        LOG_TRACE("After mesh %i indices: %zu bytes\n", i, current - buffer);
+        // LOG_TRACE("After mesh %i indices: %zu bytes\n", i, current - buffer);
       }
     }
   }
@@ -578,18 +592,18 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
       matFlags |= (material.maps ? 2 : 0);
       memcpy(current, &matFlags, sizeof(unsigned char));
       current += sizeof(unsigned char);
-      LOG_TRACE("After material %i material flags: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After material %i material flags: %zu bytes\n", i, current - buffer);
 
       // Write shader
       memcpy(current, &material.shader.id, sizeof(unsigned int));
       current += sizeof(unsigned int);
-      LOG_TRACE("After material %i shader id: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After material %i shader id: %zu bytes\n", i, current - buffer);
 
       if (material.shader.locs) {
         size_t size = sizeof(int) * RL_MAX_SHADER_LOCATIONS;
         memcpy(current, material.shader.locs, size);
         current += size;
-        LOG_TRACE("After material %i shader locs: %zu bytes\n", i, current - buffer);
+        // LOG_TRACE("After material %i shader locs: %zu bytes\n", i, current - buffer);
       }
 
       // Write material maps
@@ -598,20 +612,20 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
           const MaterialMap &map = material.maps[j];
           memcpy(current, &map.texture, sizeof(Texture));
           current += sizeof(Texture);
-          LOG_TRACE("After material %i map %i texture: %zu bytes\n", i, j, current - buffer);
+          // LOG_TRACE("After material %i map %i texture: %zu bytes\n", i, j, current - buffer);
           memcpy(current, &map.color, sizeof(Color));
           current += sizeof(Color);
-          LOG_TRACE("After material %i map %i color: %zu bytes\n", i, j, current - buffer);
+          // LOG_TRACE("After material %i map %i color: %zu bytes\n", i, j, current - buffer);
           memcpy(current, &map.value, sizeof(float));
           current += sizeof(float);
-          LOG_TRACE("After material %i map %i value: %zu bytes\n", i, j, current - buffer);
+          // LOG_TRACE("After material %i map %i value: %zu bytes\n", i, j, current - buffer);
         }
       }
 
       // Write material parameters
       memcpy(current, material.params, sizeof(float) * 4);
       current += sizeof(float) * 4;
-      LOG_TRACE("After material %i params: %zu bytes\n", i, current - buffer);
+      // LOG_TRACE("After material %i params: %zu bytes\n", i, current - buffer);
     }
   }
 
@@ -620,13 +634,13 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
     size_t size = sizeof(int) * model.meshCount;
     memcpy(current, model.meshMaterial, size);
     current += size;
-    LOG_TRACE("After mesh material: %zu bytes\n", current - buffer);
+    // LOG_TRACE("After mesh material: %zu bytes\n", current - buffer);
   }
 
   // BoneCount
   memcpy(current, &model.boneCount, sizeof(int));
   current += sizeof(int);
-  LOG_TRACE("After bone count: %zu bytes\n", current - buffer);
+  // LOG_TRACE("After bone count: %zu bytes\n", current - buffer);
 
   if (model.boneCount > 0) {
     // BoneInfo
@@ -634,7 +648,7 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
       size_t size = sizeof(BoneInfo) * model.boneCount;
       memcpy(current, model.bones, size);
       current += size;
-      LOG_TRACE("After bone info: %zu bytes\n", current - buffer);
+      // LOG_TRACE("After bone info: %zu bytes\n", current - buffer);
     }
 
     // bindPose
@@ -642,13 +656,13 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
       for (int i = 0; i < model.boneCount; i++) {
         memcpy(current, &model.bindPose[i].translation, sizeof(Vector3));
         current += sizeof(Vector3);
-        LOG_TRACE("After bind pose %i translation: %zu bytes\n", i, current - buffer);
+        // LOG_TRACE("After bind pose %i translation: %zu bytes\n", i, current - buffer);
         memcpy(current, &model.bindPose[i].rotation, sizeof(Vector4));
         current += sizeof(Vector4);
-        LOG_TRACE("After bind pose %i rotation: %zu bytes\n", i, current - buffer);
+        // LOG_TRACE("After bind pose %i rotation: %zu bytes\n", i, current - buffer);
         memcpy(current, &model.bindPose[i].scale, sizeof(Vector3));
         current += sizeof(Vector3);
-        LOG_TRACE("After bind pose %i scale: %zu bytes\n", i, current - buffer);
+        // LOG_TRACE("After bind pose %i scale: %zu bytes\n", i, current - buffer);
       }
     }
   }
@@ -685,6 +699,24 @@ ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
 
   closedir(dir);
   return files;
+}
+
+bool PackResources() {
+  // Check if rrespacker exists
+  FILE* test = fopen(RRESPACKER_PATH, "r");
+  if (!test) {
+    LOG_ERROR("Error: rrespacker not found at %s\n", RRESPACKER_PATH);
+    return false;
+  }
+  fclose(test);
+
+  // Create command
+  char cmd[512];
+  snprintf(cmd, sizeof(cmd), RESOURCE_CMD, RRESPACKER_PATH);
+
+  // Execute command
+  int result = system(cmd);
+  return result == 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -724,7 +756,10 @@ int main(int argc, char *argv[]) {
     modelMap[persistent_key] = model;
   }
 
-  system("./libs/rrespacker/rrespacker -o resources.rres --rrp resources.rrp");
+  if (!PackResources()) {
+    LOG_ERROR("Failed to pack resources\n");
+    return 1;
+  }
 
   // Testing
   rresCentralDir dir = rresLoadCentralDirectory("resources.rres");
