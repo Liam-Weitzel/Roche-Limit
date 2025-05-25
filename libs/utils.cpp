@@ -95,6 +95,72 @@ void rename_file(const char *__old, const char *__new) {
   rename(__old, __new);
 }
 
+bool is_special_dir(const char* name) {
+    return strcmp(name, ".") == 0 || strcmp(name, "..") == 0;
+}
+
+void make_path(char* fullpath, size_t size, const char* path, const char* name) {
+    #ifdef _WIN32
+        snprintf(fullpath, size, "%s\\%s", path, name);
+    #else
+        snprintf(fullpath, size, "%s/%s", path, name);
+    #endif
+}
+
+ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
+    ArrayCT<const char*, 100>& files = arena.create_array_ct<const char*, 100>();
+
+    #ifdef _WIN32
+        WIN32_FIND_DATAA find_data;
+        char search_path[1024];
+        make_path(search_path, sizeof(search_path), path, "*");
+        
+        HANDLE handle = FindFirstFileA(search_path, &find_data);
+        if (handle == INVALID_HANDLE_VALUE) return files;
+
+        do {
+            if (is_special_dir(find_data.cFileName)) continue;
+
+            char fullpath[1024];
+            make_path(fullpath, sizeof(fullpath), path, find_data.cFileName);
+
+            if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                auto subfiles = listFiles(fullpath, arena);
+                for (uint32_t i = 0; i < subfiles.size(); i++) {
+                    files.add(subfiles[i]);
+                }
+            } else {
+                files.add(strdup(fullpath));
+            }
+        } while (FindNextFileA(handle, &find_data));
+
+        FindClose(handle);
+    #else
+        DIR* dir = opendir(path);
+        if (!dir) return files;
+
+        while (struct dirent* entry = readdir(dir)) {
+            if (is_special_dir(entry->d_name)) continue;
+
+            char fullpath[1024];
+            make_path(fullpath, sizeof(fullpath), path, entry->d_name);
+
+            if (entry->d_type == DT_DIR) {
+                ArrayCT<const char*, 100>& subfiles = listFiles(fullpath, arena);
+                for (uint32_t i = 0; i < subfiles.size(); i++) {
+                    files.add(subfiles[i]);
+                }
+            } else if (entry->d_type == DT_REG) {
+                files.add(strdup(fullpath));
+            }
+        }
+
+        closedir(dir);
+    #endif
+
+    return files;
+}
+
 // NOTE: Testing
 bool CompareFloat(float a, float b, float epsilon) {
   return fabs(a - b) <= epsilon;

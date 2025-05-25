@@ -51,6 +51,7 @@
     #define NOSCROLL          // SB_* and scrolling routines
     #define NOSERVICE         // All Service Controller routines, SERVICE_ equates, etc.
     #define NOSOUND           // Sound driver routines
+    #define MMNOSOUND         // PlaySound
     #define NOTEXTMETRIC      // typedef TEXTMETRIC and associated routines
     #define NOWH              // SetWindowsHook and WH_*
     #define NOWINOFFSETS      // GWL_*, GCL_*, associated routines
@@ -91,10 +92,10 @@
     #endif
 
     #define DEBUG_BREAK() __debugbreak()
-    #define EXPORT_FN __declspec(dllexport)
+    #define EXPORT_FN extern "C" __declspec(dllexport)
 
     #include <windows.h>
-    
+
     #define BENCHMARK(fn, iterations) do { \
         FILETIME creationTime, exitTime, kernelTime, userTime; \
         GetProcessTimes(GetCurrentProcess(), &creationTime, &exitTime, &kernelTime, &userTime); \
@@ -116,6 +117,7 @@
     #define ERROR() GetLastError()
 #elif __linux__ || __APPLE__
     #include <dlfcn.h>
+    #include <dirent.h>
 
     #define DEBUG_BREAK() __builtin_trap()
     #define EXPORT_FN extern "C"
@@ -1539,6 +1541,9 @@ void write_file(const char* filePath, const char* buffer, uint32_t size);
 bool copy_file(const char* fileName, const char* outputName, Arena& arena);
 void remove_file(const char* fileName);
 void rename_file(const char *__old, const char *__new);
+bool is_special_dir(const char* name);
+void make_path(char* fullpath, size_t size, const char* path, const char* name);
+ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena);
 
 // NOTE: Testing
 bool CompareFloat(float a, float b, float epsilon = 0.0001f);

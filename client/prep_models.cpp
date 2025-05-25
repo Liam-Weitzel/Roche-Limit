@@ -4,7 +4,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -655,37 +654,6 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
   write_file(filename, buffer, current - buffer);
 }
 
-ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
-  DIR* dir;
-  struct dirent *entry;
-  ArrayCT<const char*, 100>& files = arena.create_array_ct<const char*, 100>();
-
-  dir = opendir(path);
-
-  while ((entry = readdir(dir)) != NULL) {
-    if (entry->d_type == DT_REG) {
-      if (strstr(entry->d_name, ".glb")) {
-        char fullpath[1024];
-        snprintf(fullpath, sizeof(fullpath), "%s/%s", path, entry->d_name);
-        files.add(strdup(fullpath));
-      }
-    } else if (entry->d_type == DT_DIR && strcmp(entry->d_name, ".") != 0 &&
-               strcmp(entry->d_name, "..") != 0) {
-      char subpath[1024];
-      snprintf(subpath, sizeof(subpath), "%s/%s", path, entry->d_name);
-
-      ArrayCT<const char*, 100>& subfiles = listFiles(subpath, arena);
-
-      for (uint32_t i = 0; i < subfiles.size(); i++) {
-        files.add(subfiles[i]);
-      }
-    }
-  }
-
-  closedir(dir);
-  return files;
-}
-
 bool PackResources() {
   // Check if rrespacker exists
   FILE* test = fopen(RRESPACKER_PATH, "r");
@@ -711,7 +679,14 @@ int main(int argc, char *argv[]) {
   Arena& arena = * new Arena(MB(1));
   MapCT<const char*, Model, 100>& modelMap = arena.create_map_ct<const char*, Model, 100>();
 
-  ArrayCT<const char*, 100>& models = listFiles("resources/models", arena);
+  ArrayCT<const char*, 100>& allFiles = listFiles("resources/models", arena);
+
+  ArrayCT<const char*, 100>& models = arena.create_array_ct<const char*, 100>();
+  for (uint32_t i = 0; i < allFiles.size(); i++) {
+      if (strstr(allFiles[i], ".glb")) {
+          models.add(allFiles[i]);
+      }
+  }
 
   const char* OUTPUT_DIR = "./resources/models/";
   char out_path[256];
