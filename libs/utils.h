@@ -15,8 +15,84 @@
 
 // NOTE: Cross platform stuffs
 #ifdef _WIN32
+    // To avoid conflicting windows.h symbols with raylib, some flags are defined
+    // WARNING: Those flags avoid inclusion of some Win32 headers that could be required
+    // by me at some point and won't be included...
+    //-------------------------------------------------------------------------------------
+
+    // If defined, the following flags inhibit definition of the indicated items.
+    #define NOGDICAPMASKS     // CC_*, LC_*, PC_*, CP_*, TC_*, RC_
+    #define NOVIRTUALKEYCODES // VK_*
+    #define NOWINMESSAGES     // WM_*, EM_*, LB_*, CB_*
+    #define NOWINSTYLES       // WS_*, CS_*, ES_*, LBS_*, SBS_*, CBS_*
+    #define NOSYSMETRICS      // SM_*
+    #define NOMENUS           // MF_*
+    #define NOICONS           // IDI_*
+    #define NOKEYSTATES       // MK_*
+    #define NOSYSCOMMANDS     // SC_*
+    #define NORASTEROPS       // Binary and Tertiary raster ops
+    #define NOSHOWWINDOW      // SW_*
+    #define OEMRESOURCE       // OEM Resource values
+    #define NOATOM            // Atom Manager routines
+    #define NOCLIPBOARD       // Clipboard routines
+    #define NOCOLOR           // Screen colors
+    #define NOCTLMGR          // Control and Dialog routines
+    #define NODRAWTEXT        // DrawText() and DT_*
+    #define NOGDI             // All GDI defines and routines
+    #define NOKERNEL          // All KERNEL defines and routines
+    #define NOUSER            // All USER defines and routines
+    //#define NONLS             // All NLS defines and routines
+    #define NOMB              // MB_* and MessageBox()
+    #define NOMEMMGR          // GMEM_*, LMEM_*, GHND, LHND, associated routines
+    #define NOMETAFILE        // typedef METAFILEPICT
+    #define NOMINMAX          // Macros min(a,b) and max(a,b)
+    #define NOMSG             // typedef MSG and associated routines
+    #define NOOPENFILE        // OpenFile(), OemToAnsi, AnsiToOem, and OF_*
+    #define NOSCROLL          // SB_* and scrolling routines
+    #define NOSERVICE         // All Service Controller routines, SERVICE_ equates, etc.
+    #define NOSOUND           // Sound driver routines
+    #define NOTEXTMETRIC      // typedef TEXTMETRIC and associated routines
+    #define NOWH              // SetWindowsHook and WH_*
+    #define NOWINOFFSETS      // GWL_*, GCL_*, associated routines
+    #define NOCOMM            // COMM driver routines
+    #define NOKANJI           // Kanji support stuff.
+    #define NOHELP            // Help engine interface.
+    #define NOPROFILER        // Profiler interface.
+    #define NODEFERWINDOWPOS  // DeferWindowPos routines
+    #define NOMCX             // Modem Configuration Extensions
+
+    // Type required before windows.h inclusion
+    typedef struct tagMSG *LPMSG;
+
+    #include <windows.h>
+
+    // Type required by some unused function...
+    typedef struct tagBITMAPINFOHEADER {
+        DWORD biSize;
+        LONG  biWidth;
+        LONG  biHeight;
+        WORD  biPlanes;
+        WORD  biBitCount;
+        DWORD biCompression;
+        DWORD biSizeImage;
+        LONG  biXPelsPerMeter;
+        LONG  biYPelsPerMeter;
+        DWORD biClrUsed;
+        DWORD biClrImportant;
+    } BITMAPINFOHEADER, *PBITMAPINFOHEADER;
+
+    #include <objbase.h>
+    #include <mmreg.h>
+    #include <mmsystem.h>
+
+    // Some required types defined for MSVC/TinyC compiler
+    #if defined(_MSC_VER) || defined(__TINYC__)
+        #include "propidl.h"
+    #endif
+
     #define DEBUG_BREAK() __debugbreak()
     #define EXPORT_FN __declspec(dllexport)
+
     #include <windows.h>
     
     #define BENCHMARK(fn, iterations) do { \
@@ -32,9 +108,23 @@
         double elapsed = (end.QuadPart - start.QuadPart) / 10.0; \
         printf("%.3f µs\n", elapsed / iterations); \
     } while (0)
+
+    #define HANDLE HMODULE
+    #define OPEN(path) LoadLibraryA(path)
+    #define CLOSE(handle) FreeLibrary(handle)
+    #define GET_SYMBOL(handle, name) GetProcAddress(handle, name)
+    #define ERROR() GetLastError()
 #elif __linux__ || __APPLE__
+    #include <dlfcn.h>
+
     #define DEBUG_BREAK() __builtin_trap()
     #define EXPORT_FN extern "C"
+    #define HANDLE void*
+    #define OPEN(path) dlopen(path, RTLD_NOW)
+    #define CLOSE(handle) dlclose(handle)
+    #define GET_SYMBOL(handle, name) dlsym(handle, name)
+    #define ERROR() dlerror()
+
     #include <ctime>
     
     #define BENCHMARK(fn, iterations) do { \
@@ -45,6 +135,38 @@
         printf("%.3f µs\n", elapsed / iterations); \
     } while (0)
 #endif
+
+// NOTE: Load, unload and get symbols from dynamic lib
+template<typename T>
+struct DynamicLib {
+    HANDLE handle = nullptr;
+    T* symbols = nullptr;
+
+    bool load(const char* path) {
+        handle = OPEN(path);
+        if (!handle) return false;
+        symbols = new T();
+        return true;
+    }
+
+    void unload() {
+        if (handle) {
+            CLOSE(handle);
+            handle = nullptr;
+        }
+        if (symbols) {
+            delete symbols;
+            symbols = nullptr;
+        }
+    }
+
+    bool is_loaded() const { return handle != nullptr; }
+
+    template<typename F>
+    F get_symbol(const char* name) {
+        return (F)GET_SYMBOL(handle, name);
+    }
+};
 
 // NOTE: Logging
 enum TextColor

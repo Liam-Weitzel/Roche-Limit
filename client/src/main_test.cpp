@@ -1,51 +1,24 @@
-#include <dlfcn.h>
 #include "game_state.h"
 #include "utils_test.h"
 #include "utils.h"
 
-// typedef void (*client_main_fn)(GameState*);
+//typedef void (*client_main_fn)(GameState*);
 
-struct Client {
-    void* library = nullptr;
-    // client_main_fn main = nullptr;
+struct ClientAPI {
+    //client_main_fn main;
 };
 
-Client load_client() {
-    LOG_TRACE("Loading client code...");
-    Client client{};
-
-    client.library = dlopen(CLIENT_LIB_PATH, RTLD_NOW);
-    if (!client.library) {
-        LOG_ERROR("Failed to open library: ", dlerror());
-        return client;
-    }
-    LOG_TRACE("Successfully opened library");
-
-    // client.main = (client_main_fn)dlsym(client.library, "client_main");
-    // LOG_TRACE("Loaded client main function: ", (client.main ? "success" : "failed"));
-    return client;
-}
-
-void unload_client(Client* client) {
-    LOG_TRACE("Unloading library handle: ", client->library)
-    dlclose(client->library);
-    client->library = nullptr;
-    // client->main = nullptr;
-}
-
 int main() {
-    LOG_TRACE("Starting client...");
+    LOG_TRACE("Starting tests...");
     
-    Client client = load_client();
-    
-    if (!client.library) {
-        LOG_ERROR("Failed to load initial client code");
+    DynamicLib<ClientAPI> client;
+
+    if (!client.load(CLIENT_LIB_PATH)) {
+        LOG_ERROR("Failed to load library");
         return 1;
     }
 
-    // GameState state{};
-    // client.main(&state);
-
+    // Run all tests
     iterators_arrays_CT_test();
     iterators_arrays_RT_test();
     create_and_fetch_arena_in_different_scope_CT_test();
@@ -58,5 +31,6 @@ int main() {
     gen_sparse_set_rt_test();
     file_io_test();
 
-    unload_client(&client);
+    client.unload();
+    return 0;
 }
