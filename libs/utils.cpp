@@ -100,11 +100,7 @@ bool is_special_dir(const char* name) {
 }
 
 void make_path(char* fullpath, size_t size, const char* path, const char* name) {
-    #ifdef _WIN32
-        snprintf(fullpath, size, "%s\\%s", path, name);
-    #else
-        snprintf(fullpath, size, "%s/%s", path, name);
-    #endif
+    snprintf(fullpath, size, "%s/%s", path, name);
 }
 
 ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
@@ -115,7 +111,7 @@ ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
         char search_path[1024];
         make_path(search_path, sizeof(search_path), path, "*");
         
-        viod* handle = FindFirstFileA(search_path, &find_data);
+        void* handle = FindFirstFileA(search_path, &find_data);
         if (handle == INVALID_HANDLE_VALUE) return files;
 
         do {
@@ -125,7 +121,7 @@ ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
             make_path(fullpath, sizeof(fullpath), path, find_data.cFileName);
 
             if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                auto subfiles = listFiles(fullpath, arena);
+                ArrayCT<const char*, 100>& subfiles = listFiles(fullpath, arena);
                 for (uint32_t i = 0; i < subfiles.size(); i++) {
                     files.add(subfiles[i]);
                 }

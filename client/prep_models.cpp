@@ -665,7 +665,7 @@ bool PackResources() {
 
   // Create command
   char cmd[512];
-  snprintf(cmd, sizeof(cmd), "\"%s\" -o resources.rres --rpp resources.rpp", RRESPACKER_PATH);
+  snprintf(cmd, sizeof(cmd), "\"%s\" -o resources.rres --rrp resources.rrp", RRESPACKER_PATH);
 
   // Execute command
   int result = system(cmd);

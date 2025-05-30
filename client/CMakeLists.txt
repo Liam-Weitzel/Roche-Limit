@@ -165,10 +165,17 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # Set library properties
-set_target_properties(client_lib PROPERTIES
-    OUTPUT_NAME "client"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
+if(WIN32)
+    set_target_properties(client_lib PROPERTIES
+        OUTPUT_NAME "lib_client"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+else()
+    set_target_properties(client_lib PROPERTIES
+        OUTPUT_NAME "_client"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    )
+endif()
 
 # Include directories for the library
 target_include_directories(client_lib PRIVATE 
@@ -458,7 +465,7 @@ target_compile_options(client PRIVATE
 )
 
 target_compile_definitions(client PRIVATE 
-    CLIENT_LIB_PATH="./libclient.${LIB_EXTENSION}"
+    CLIENT_LIB_PATH="./lib_client.${LIB_EXTENSION}"
 )
 
 # Copy Steam library to output directory
@@ -470,3 +477,11 @@ add_custom_command(TARGET client POST_BUILD
 
 add_dependencies(client client_lib)
 add_dependencies(client_test client_lib)
+
+#TODO:
+# - windows: output path
+# - msvc compiler flags
+# - clang compiler flags
+# - all platforms: add utils_test to build & actions
+# - all platforms: add performance tests to build & actions
+# - windows full build
