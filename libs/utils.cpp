@@ -115,7 +115,7 @@ ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
         char search_path[1024];
         make_path(search_path, sizeof(search_path), path, "*");
         
-        HANDLE handle = FindFirstFileA(search_path, &find_data);
+        viod* handle = FindFirstFileA(search_path, &find_data);
         if (handle == INVALID_HANDLE_VALUE) return files;
 
         do {

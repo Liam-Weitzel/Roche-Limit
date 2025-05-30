@@ -307,18 +307,14 @@ add_executable(prep_models prep_models.cpp ${LIB_SOURCES})
 # Set rrespacker paths and commands based on platform
 if(WIN32)
     set(RRESPACKER_PATH "${CMAKE_SOURCE_DIR}/libs/rrespacker/rrespacker.exe")
-    set(RESOURCE_CMD $(RRESPACKER_PATH) -o resoursces.rres --rpp resources.rpp)
 elseif(APPLE)
     set(RRESPACKER_PATH "${CMAKE_SOURCE_DIR}/libs/rrespacker/rrespacker.app/Contents/MacOS/rrespacker")
-    set(RESOURCE_CMD "%s -o resources.rres --rrp resources.rrp")
 else() # Linux
     set(RRESPACKER_PATH "${CMAKE_SOURCE_DIR}/libs/rrespacker/rrespacker")
-    set(RESOURCE_CMD "%s -o resources.rres --rrp resources.rrp")
 endif()
 
 target_compile_definitions(prep_models PRIVATE 
     RRESPACKER_PATH="${RRESPACKER_PATH}"
-    RESOURCE_CMD="${RESOURCE_CMD}"
 )
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

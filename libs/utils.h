@@ -110,22 +110,22 @@
         printf("%.3f µs\n", elapsed / iterations); \
     } while (0)
 
-    #define HANDLE HMODULE
-    #define OPEN(path) LoadLibraryA(path)
-    #define CLOSE(handle) FreeLibrary(handle)
-    #define GET_SYMBOL(handle, name) GetProcAddress(handle, name)
-    #define ERROR() GetLastError()
+    #define LIB_HANDLE HMODULE
+    #define LIB_OPEN(path) LoadLibraryA(path)
+    #define LIB_CLOSE(handle) FreeLibrary(handle)
+    #define LIB_GET_SYMBOL(handle, name) GetProcAddress(handle, name)
+    #define LIB_ERROR() GetLastError()
 #elif __linux__ || __APPLE__
     #include <dlfcn.h>
     #include <dirent.h>
 
     #define DEBUG_BREAK() __builtin_trap()
     #define EXPORT_FN extern "C"
-    #define HANDLE void*
-    #define OPEN(path) dlopen(path, RTLD_NOW)
-    #define CLOSE(handle) dlclose(handle)
-    #define GET_SYMBOL(handle, name) dlsym(handle, name)
-    #define ERROR() dlerror()
+    #define LIB_HANDLE void*
+    #define LIB_OPEN(path) dlopen(path, RTLD_NOW)
+    #define LIB_CLOSE(handle) dlclose(handle)
+    #define LIB_GET_SYMBOL(handle, name) dlsym(handle, name)
+    #define LIB_ERROR() dlerror()
 
     #include <ctime>
     
@@ -141,11 +141,11 @@
 // NOTE: Load, unload and get symbols from dynamic lib
 template<typename T>
 struct DynamicLib {
-    HANDLE handle = nullptr;
+    LIB_HANDLE handle = nullptr;
     T* symbols = nullptr;
 
     bool load(const char* path) {
-        handle = OPEN(path);
+        handle = LIB_OPEN(path);
         if (!handle) return false;
         symbols = new T();
         return true;
@@ -153,7 +153,7 @@ struct DynamicLib {
 
     void unload() {
         if (handle) {
-            CLOSE(handle);
+            LIB_CLOSE(handle);
             handle = nullptr;
         }
         if (symbols) {
@@ -166,7 +166,7 @@ struct DynamicLib {
 
     template<typename F>
     F get_symbol(const char* name) {
-        return (F)GET_SYMBOL(handle, name);
+        return (F)LIB_GET_SYMBOL(handle, name);
     }
 };
 
