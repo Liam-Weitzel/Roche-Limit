@@ -165,15 +165,20 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 # Set library properties
+set_target_properties(client_lib PROPERTIES
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
+
+# Platform-specific tweaks
 if(WIN32)
     set_target_properties(client_lib PROPERTIES
         OUTPUT_NAME "lib_client"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 else()
     set_target_properties(client_lib PROPERTIES
         OUTPUT_NAME "_client"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     )
 endif()
 
@@ -331,6 +336,7 @@ endif()
 # Set output directory for prep_models
 set_target_properties(prep_models PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 target_include_directories(prep_models PRIVATE 
@@ -377,6 +383,7 @@ endif()
 # Set output directory for client_test
 set_target_properties(client_test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 target_include_directories(client_test PRIVATE 
@@ -427,6 +434,7 @@ endif()
 # Set executable output directory
 set_target_properties(client PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
 
 # Include directories for the main executable
@@ -479,8 +487,6 @@ add_dependencies(client client_lib)
 add_dependencies(client_test client_lib)
 
 #TODO:
-# - msvc compiler flags
-# - clang compiler flags
+# - msvc compiler flags (resolve warnings...)
+# - clang compiler flags (I think some of them are being ignored because of the order)
 # - all platforms: add performance tests to build & actions
-# - windows: output path
-# - windows full build

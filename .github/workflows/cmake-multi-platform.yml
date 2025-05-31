@@ -39,11 +39,19 @@ jobs:
             osx_deployment_target: "10.14.6"
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: recursive
+    - name: Clean & Clone
+      shell: bash
+      working-directory: ${{ github.workspace }}/..
+      run: |
+        rm -rf ./Roche-Limit
+        git clone https://github.com/Liam-Weitzel/Roche-Limit Roche-Limit
+        cd Roche-Limit
+        git checkout "${{ github.sha }}"
+        git submodule sync --recursive
+        git submodule update --init --recursive --depth=1
 
     - name: Setup
+      shell: bash
       run: |
         if [ "${{ matrix.os-name }}" = "linux" ]; then
           sudo apt-get update
@@ -124,47 +132,63 @@ jobs:
           wget -q ${{ secrets.STEAM_SDK_URL }} -O steam_sdk.zip
           unzip -q steam_sdk.zip -d ${{ github.workspace }}/libs/steam/
         fi
+        if [ "${{ matrix.os-name }}" = "windows" ]; then
+          /c/Users/runner/Downloads/wget.exe -q "${{ secrets.RESSPACKER_URL }}" -O rrespacker.zip
+          unzip -oq rrespacker.zip -d "${{ github.workspace }}/client/libs/rrespacker/"
+
+          /c/Users/runner/Downloads/wget.exe -q "${{ secrets.STEAM_SDK_URL }}" -O steam_sdk.zip
+          unzip -oq steam_sdk.zip -d "${{ github.workspace }}/libs/steam/"
+        fi
 
     - name: Build client
+      working-directory: ${{ github.workspace }}/client
       run: |
-        if [ "${{ matrix.os-name }}" = "linux" ] || [ "${{ matrix.os-name }}" = "mac" ]; then
-          cd ${{ github.workspace }}/client
-          mkdir build/
-          cd build/
-          cmake \
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} \
-          ${{ matrix.osx_deployment_target && format('-DCMAKE_OSX_DEPLOYMENT_TARGET={0}', matrix.osx_deployment_target) || '' }} \
-          ${{ matrix.display == 'wayland' && '-DUSE_WAYLAND=ON -DUSE_X11=OFF' || '' }} \
-          -S ..
-          cmake --build . -j$(nproc) --verbose
+        mkdir build/
+        cd build/
+        cmake \
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} \
+        ${{ matrix.osx_deployment_target && format('-DCMAKE_OSX_DEPLOYMENT_TARGET={0}', matrix.osx_deployment_target) || '' }} \
+        ${{ matrix.display == 'wayland' && '-DUSE_WAYLAND=ON -DUSE_X11=OFF' || '' }} \
+        -S ..
+        cmake --build . -j$(nproc) --verbose
+
+    - name: Test Client (Linux)
+      if: matrix.os-name == 'linux'
+      shell: bash
+      working-directory: ${{ github.workspace }}/client
+      run: |
+        if [ "${{ matrix.display }}" = "x11" ]; then
+          xvfb-run ./prep_models
+          pkill -9 Xvfb || true
+          sleep 3
+          xvfb-run -a ./client_test
+        fi
+        if [ "${{ matrix.display }}" = "wayland" ]; then
+          # Start Sway in headless mode
+          WLR_BACKENDS=headless sway --verbose --config $XDG_RUNTIME_DIR/config &
+          sleep 10
+          ./prep_models
+          ./client_test
         fi
 
-    - name: Test Client
+    - name: Test Client (Mac)
+      if: matrix.os-name == 'mac'
+      shell: bash
+      working-directory: ${{ github.workspace }}/client
       run: |
-        if [ "${{ matrix.os-name }}" = "linux" ] || [ "${{ matrix.os-name }}" = "mac" ]; then
-          cd ${{ github.workspace }}/client
-          if [ "${{ matrix.display }}" = "x11" ]; then
-            xvfb-run ./prep_models
-            sleep 3
-            pkill -9 Xvfb || true
-            sleep 3
-            xvfb-run -a ./client_test
-          fi
-          if [ "${{ matrix.display }}" = "wayland" ]; then
-            # Start Sway in headless mode
-            WLR_BACKENDS=headless sway --verbose --config $XDG_RUNTIME_DIR/config &
-            sleep 3
-            ./prep_models
-            ./client_test
-          fi
-          if [ "${{ matrix.os-name }}" = "mac" ]; then
-            ./prep_models
-            ./client_test
-          fi
-        fi
+        ./prep_models
+        ./client_test
+
+    - name: Test Client (Windows)
+      if: matrix.os-name == 'windows'
+      shell: cmd
+      working-directory: ${{ github.workspace }}/client
+      run: |
+        prep_models.exe
+        client_test.exe
 
     - name: Upload client artifacts
       uses: actions/upload-artifact@v4
@@ -174,31 +198,43 @@ jobs:
           client/client
           client/client.exe
           client/resources.rres
-          client/libclient.so
+          client/lib_client.so
           client/libsteam_api.so
-          client/libclient.dylib
+          client/lib_client.dylib
           client/libsteam_api.dylib
-          client/client.dll
+          client/lib_client.dll
           client/steam_api64.dll
         if-no-files-found: warn
 
     - name: Build server
       run: |
-        if [ "${{ matrix.os-name }}" = "linux" ] || [ "${{ matrix.os-name }}" = "mac" ]; then
-          cd ${{ github.workspace }}/server
-          mkdir build/
-          cd build/
-          cmake \
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} \
-          ${{ matrix.osx_deployment_target && format('-DCMAKE_OSX_DEPLOYMENT_TARGET={0}', matrix.osx_deployment_target) || '' }} \
-          -S ..
-          cmake --build . -j$(nproc) --verbose
-        fi
+        cd "${{ github.workspace }}/server"
+        mkdir build/
+        cd build/
+        cmake \
+        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
+        -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} \
+        ${{ matrix.osx_deployment_target && format('-DCMAKE_OSX_DEPLOYMENT_TARGET={0}', matrix.osx_deployment_target) || '' }} \
+        -S ..
+        cmake --build . -j$(nproc) --verbose
 
-    - name: Test Server
+    - name: Test Server (Linux)
+      if: matrix.os-name == 'linux'
+      shell: bash
+      run: |
+        echo "To be implemented"
+
+    - name: Test Server (Mac)
+      if: matrix.os-name == 'mac'
+      shell: bash
+      run: |
+        echo "To be implemented"
+
+    - name: Test Server (Windows)
+      if: matrix.os-name == 'windows'
+      shell: cmd
       run: |
         echo "To be implemented"
 
