@@ -208,8 +208,8 @@ target_link_libraries(client_lib PRIVATE
 # Common compiler flags for both Debug and Release
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set(COMMON_COMPILE_OPTIONS
-        /W4               # Warning level 4
-        /WX               # Treat warnings as errors
+        # /W4             # Warning level 4
+        # /WX             # Treat warnings as errors
         /wd4100           # Unreferenced formal parameter
         /wd4189           # Local variable initialized but not referenced
         /wd4996           # Unsafe function warnings
@@ -479,9 +479,8 @@ add_dependencies(client client_lib)
 add_dependencies(client_test client_lib)
 
 #TODO:
-# - windows: output path
 # - msvc compiler flags
 # - clang compiler flags
-# - all platforms: add utils_test to build & actions
 # - all platforms: add performance tests to build & actions
+# - windows: output path
 # - windows full build

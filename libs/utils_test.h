@@ -5,8 +5,11 @@
 // Example Entity
 struct Entity {
   int id;
-  char* name;
-  
+  const char* name;
+
+  Entity() : id(0), name(nullptr) {}
+  Entity(int id, const char* name) : id(id), name(name) {}
+
   bool operator==(const Entity& other) const {
     if(this->id == other.id && this->name == other.name) return true;
     return false;

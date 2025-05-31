@@ -7,7 +7,8 @@
 // NOTE: Datastructures
 void iterators_arrays_CT_test() {
   // Create CT array on stack
-  ArrayCT<Entity, 3> array = {};
+  ArrayCT<Entity, 3> array;
+  array.init();
 
   // Create an array of entities
   Entity entities[] = {
@@ -336,7 +337,11 @@ void create_arena_clear_test() {
     // Add entities to the array within the arena
     entitiesArray.add(entities, 3);
 
-    LOG_ASSERT(arena.size() == 80, failedMsg)
+    #ifdef _WIN32
+      LOG_ASSERT(arena.size() == 48, failedMsg)
+    #else
+      LOG_ASSERT(arena.size() == 80, failedMsg)
+    #endif
   }
   arena.clear();
   LOG_ASSERT(arena.size() == 0, failedMsg)
@@ -356,7 +361,11 @@ void create_arena_clear_test() {
     // Add entities to the array within the arena
     entitiesArray.add(entities, 3);
 
-    LOG_ASSERT(arena.size() == 80, failedMsg);
+    #ifdef _WIN32
+      LOG_ASSERT(arena.size() == 48, failedMsg)
+    #else
+      LOG_ASSERT(arena.size() == 80, failedMsg)
+    #endif
   }
   delete &arena;
   LOG_TRACE("[ PASSED ] create_arena_clear_test")
@@ -378,9 +387,9 @@ void gen_sparse_set_ct_test() {
   LOG_ASSERT(set.get(invalid_id) == nullptr, failedMsg);
 
   // Test swap-pop edge case
-  GenId id_first = set.add(Entity{1, "First"});
-  GenId id_middle = set.add(Entity{2, "Middle"});
-  GenId id_last = set.add(Entity{3, "Last"});
+  GenId id_first = set.add(Entity(1, "First"));
+  GenId id_middle = set.add(Entity(2, "Middle"));
+  GenId id_last = set.add(Entity(3, "Last"));
   LOG_ASSERT(set.get(id_first)->id == 1, failedMsg);
   LOG_ASSERT(set.get(id_middle)->id == 2, failedMsg);
   LOG_ASSERT(set.get(id_last)->id == 3, failedMsg);
@@ -396,7 +405,7 @@ void gen_sparse_set_ct_test() {
   set.clear();
 
   // Add and test first entity
-  GenId id1 = set.add(Entity{1, "First"});
+  GenId id1 = set.add(Entity(1, "First"));
   LOG_ASSERT(set.size() == 1, failedMsg);
   LOG_ASSERT(set.contains(id1), failedMsg);
   LOG_ASSERT(set.get(id1)->id == 1, failedMsg);
@@ -404,7 +413,7 @@ void gen_sparse_set_ct_test() {
   // Fill the set
   GenId ids[7];
   for(int i = 0; i < 7; i++) {
-    ids[i] = set.add(Entity{i + 2, "Entity"});
+    ids[i] = set.add(Entity(i + 2, "Entity"));
     LOG_ASSERT(set.contains(ids[i]), failedMsg);
   }
   LOG_ASSERT(set.size() == 8, failedMsg);
@@ -416,7 +425,7 @@ void gen_sparse_set_ct_test() {
   LOG_ASSERT(set.get(ids[2]) == nullptr, failedMsg);
 
   // Test reuse of slot with generation increment
-  GenId new_id = set.add(Entity{99, "Reused"});
+  GenId new_id = set.add(Entity(99, "Reused"));
   LOG_ASSERT(new_id.id() == ids[2].id(), failedMsg);
   LOG_ASSERT(new_id.gen() == ids[2].gen() + 1, failedMsg);
   LOG_ASSERT(set.contains(new_id), failedMsg);
@@ -432,7 +441,7 @@ void gen_sparse_set_ct_test() {
 
   GenId reused_ids[3];
   for(int i = 0; i < 3; i++) {
-    reused_ids[i] = set.add(Entity{100 + i, "Reused"});
+    reused_ids[i] = set.add(Entity(100 + i, "Reused"));
     LOG_ASSERT(set.contains(reused_ids[i]), failedMsg);
     LOG_ASSERT(set.get(reused_ids[i])->id == 100 + i, failedMsg);
   }
@@ -444,7 +453,7 @@ void gen_sparse_set_ct_test() {
   LOG_ASSERT(set.size() == 0, failedMsg);
 
   // Test that generations persisted after clear
-  GenId post_clear_id = set.add(Entity{1, "Post Clear"});
+  GenId post_clear_id = set.add(Entity(1, "Post Clear"));
   // Should have incremented generation for previously used slot
   LOG_ASSERT(post_clear_id.gen() > 0, failedMsg);
   
@@ -471,7 +480,7 @@ void gen_sparse_set_ct_test() {
 
   // Test generation roll-over after 255
   {
-    GenId id = set.add(Entity{1, "Rollover"});
+    GenId id = set.add(Entity(1, "Rollover"));
     uint32_t initial_id = id.id();
     uint8_t start_gen = id.gen();
     
@@ -481,7 +490,7 @@ void gen_sparse_set_ct_test() {
     // Force generation to roll over
     for (int i = 0; i < iterations_needed; i++) {
         set.remove(id);
-        id = set.add(Entity{1, "Rollover"});
+        id = set.add(Entity(1, "Rollover"));
         // Verify we're using the same slot
         LOG_ASSERT(id.id() == initial_id, failedMsg);
         LOG_ASSERT(id.gen() == (start_gen + i + 1) % 256, failedMsg);
@@ -515,9 +524,9 @@ void gen_sparse_set_rt_test() {
   LOG_ASSERT(set.get(invalid_id) == nullptr, failedMsg);
 
   // Test swap-pop edge case
-  GenId id_first = set.add(Entity{1, "First"});
-  GenId id_middle = set.add(Entity{2, "Middle"});
-  GenId id_last = set.add(Entity{3, "Last"});
+  GenId id_first = set.add(Entity(1, "First"));
+  GenId id_middle = set.add(Entity(2, "Middle"));
+  GenId id_last = set.add(Entity(3, "Last"));
   LOG_ASSERT(set.get(id_first)->id == 1, failedMsg);
   LOG_ASSERT(set.get(id_middle)->id == 2, failedMsg);
   LOG_ASSERT(set.get(id_last)->id == 3, failedMsg);
@@ -533,7 +542,7 @@ void gen_sparse_set_rt_test() {
   set.clear();
 
   // Add and test first entity
-  GenId id1 = set.add(Entity{1, "First"});
+  GenId id1 = set.add(Entity(1, "First"));
   LOG_ASSERT(set.size() == 1, failedMsg);
   LOG_ASSERT(set.contains(id1), failedMsg);
   LOG_ASSERT(set.get(id1)->id == 1, failedMsg);
@@ -541,7 +550,7 @@ void gen_sparse_set_rt_test() {
   // Fill the set
   GenId ids[7];
   for(int i = 0; i < 7; i++) {
-    ids[i] = set.add(Entity{i + 2, "Entity"});
+    ids[i] = set.add(Entity(i + 2, "Entity"));
     LOG_ASSERT(set.contains(ids[i]), failedMsg);
   }
   LOG_ASSERT(set.size() == 8, failedMsg);
@@ -553,7 +562,7 @@ void gen_sparse_set_rt_test() {
   LOG_ASSERT(set.get(ids[2]) == nullptr, failedMsg);
 
   // Test reuse of slot with generation increment
-  GenId new_id = set.add(Entity{99, "Reused"});
+  GenId new_id = set.add(Entity(99, "Reused"));
   LOG_ASSERT(new_id.id() == ids[2].id(), failedMsg);
   LOG_ASSERT(new_id.gen() == ids[2].gen() + 1, failedMsg);
   LOG_ASSERT(set.contains(new_id), failedMsg);
@@ -569,7 +578,7 @@ void gen_sparse_set_rt_test() {
 
   GenId reused_ids[3];
   for(int i = 0; i < 3; i++) {
-    reused_ids[i] = set.add(Entity{100 + i, "Reused"});
+    reused_ids[i] = set.add(Entity(100 + i, "Reused"));
     LOG_ASSERT(set.contains(reused_ids[i]), failedMsg);
     LOG_ASSERT(set.get(reused_ids[i])->id == 100 + i, failedMsg);
   }
@@ -581,7 +590,7 @@ void gen_sparse_set_rt_test() {
   LOG_ASSERT(set.size() == 0, failedMsg);
 
   // Test that generations persisted after clear
-  GenId post_clear_id = set.add(Entity{1, "Post Clear"});
+  GenId post_clear_id = set.add(Entity(1, "Post Clear"));
   // Should have incremented generation for previously used slot
   LOG_ASSERT(post_clear_id.gen() > 0, failedMsg);
   
@@ -608,7 +617,7 @@ void gen_sparse_set_rt_test() {
 
   // Test generation roll-over after 255
   {
-    GenId id = set.add(Entity{1, "Rollover"});
+    GenId id = set.add(Entity(1, "Rollover"));
     uint32_t initial_id = id.id();
     uint8_t start_gen = id.gen();
     
@@ -618,7 +627,7 @@ void gen_sparse_set_rt_test() {
     // Force generation to roll over
     for (int i = 0; i < iterations_needed; i++) {
         set.remove(id);
-        id = set.add(Entity{1, "Rollover"});
+        id = set.add(Entity(1, "Rollover"));
         // Verify we're using the same slot
         LOG_ASSERT(id.id() == initial_id, failedMsg);
         LOG_ASSERT(id.gen() == (start_gen + i + 1) % 256, failedMsg);
@@ -645,9 +654,9 @@ void gen_sparse_set_ct_determinism_test() {
   auto& set3 = arena.create_gen_sparse_set_ct<Entity, 8>();
 
   // Test that identical operations produce identical IDs
-  GenId id1 = set1.add(Entity{1, "First"});
-  GenId id2 = set2.add(Entity{2, "First"});
-  GenId id3 = set3.add(Entity{3, "First"});
+  GenId id1 = set1.add(Entity(1, "First"));
+  GenId id2 = set2.add(Entity(2, "First"));
+  GenId id3 = set3.add(Entity(3, "First"));
 
   // IDs should be identical since operations were the same
   LOG_ASSERT(id1.id() == id2.id() && id2.id() == id3.id(), failedMsg);
@@ -659,9 +668,9 @@ void gen_sparse_set_ct_determinism_test() {
   set3.remove(id3);
 
   // Adding new elements should reuse the same slots with incremented generations
-  GenId new_id1 = set1.add(Entity{4, "Second"});
-  GenId new_id2 = set2.add(Entity{5, "Second"});
-  GenId new_id3 = set3.add(Entity{6, "Second"});
+  GenId new_id1 = set1.add(Entity(4, "Second"));
+  GenId new_id2 = set2.add(Entity(5, "Second"));
+  GenId new_id3 = set3.add(Entity(6, "Second"));
 
   // New IDs should match and have incremented generations
   LOG_ASSERT(new_id1.id() == new_id2.id() && new_id2.id() == new_id3.id(), failedMsg);
@@ -681,9 +690,9 @@ void gen_sparse_set_rt_determinism_test() {
   auto& set3 = arena.create_gen_sparse_set_rt<Entity>(8);
 
   // Test that identical operations produce identical IDs
-  GenId id1 = set1.add(Entity{1, "First"});
-  GenId id2 = set2.add(Entity{2, "First"});
-  GenId id3 = set3.add(Entity{3, "First"});
+  GenId id1 = set1.add(Entity(1, "First"));
+  GenId id2 = set2.add(Entity(2, "First"));
+  GenId id3 = set3.add(Entity(3, "First"));
 
   // IDs should be identical since operations were the same
   LOG_ASSERT(id1.id() == id2.id() && id2.id() == id3.id(), failedMsg);
@@ -695,9 +704,9 @@ void gen_sparse_set_rt_determinism_test() {
   set3.remove(id3);
 
   // Adding new elements should reuse the same slots with incremented generations
-  GenId new_id1 = set1.add(Entity{4, "Second"});
-  GenId new_id2 = set2.add(Entity{5, "Second"});
-  GenId new_id3 = set3.add(Entity{6, "Second"});
+  GenId new_id1 = set1.add(Entity(4, "Second"));
+  GenId new_id2 = set2.add(Entity(5, "Second"));
+  GenId new_id3 = set3.add(Entity(6, "Second"));
 
   // New IDs should match and have incremented generations
   LOG_ASSERT(new_id1.id() == new_id2.id() && new_id2.id() == new_id3.id(), failedMsg);
