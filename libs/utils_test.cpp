@@ -636,6 +636,78 @@ void gen_sparse_set_rt_test() {
   LOG_TRACE("[ PASSED ] gen_sparse_set_rt_test");
 }
 
+void gen_sparse_set_ct_determinism_test() {
+  Arena& arena = *new Arena(KB(1));
+  const char* failedMsg = "[ FAILED ] gen_sparse_set_ct_determinism_test";
+
+  auto& set1 = arena.create_gen_sparse_set_ct<Entity, 8>();
+  auto& set2 = arena.create_gen_sparse_set_ct<Entity, 8>();
+  auto& set3 = arena.create_gen_sparse_set_ct<Entity, 8>();
+
+  // Test that identical operations produce identical IDs
+  GenId id1 = set1.add(Entity{1, "First"});
+  GenId id2 = set2.add(Entity{2, "First"});
+  GenId id3 = set3.add(Entity{3, "First"});
+
+  // IDs should be identical since operations were the same
+  LOG_ASSERT(id1.id() == id2.id() && id2.id() == id3.id(), failedMsg);
+  LOG_ASSERT(id1.gen() == id2.gen() && id2.gen() == id3.gen(), failedMsg);
+
+  // Test removal synchronization
+  set1.remove(id1);
+  set2.remove(id2);
+  set3.remove(id3);
+
+  // Adding new elements should reuse the same slots with incremented generations
+  GenId new_id1 = set1.add(Entity{4, "Second"});
+  GenId new_id2 = set2.add(Entity{5, "Second"});
+  GenId new_id3 = set3.add(Entity{6, "Second"});
+
+  // New IDs should match and have incremented generations
+  LOG_ASSERT(new_id1.id() == new_id2.id() && new_id2.id() == new_id3.id(), failedMsg);
+  LOG_ASSERT(new_id1.gen() == new_id2.gen() && new_id2.gen() == new_id3.gen(), failedMsg);
+  LOG_ASSERT(new_id1.gen() == id1.gen() + 1, failedMsg);
+
+  delete &arena;
+  LOG_TRACE("[ PASSED ] gen_sparse_set_ct_determinism_test");
+}
+
+void gen_sparse_set_rt_determinism_test() {
+  Arena& arena = *new Arena(KB(1));
+  const char* failedMsg = "[ FAILED ] gen_sparse_set_rt_determinism_test";
+
+  auto& set1 = arena.create_gen_sparse_set_rt<Entity>(8);
+  auto& set2 = arena.create_gen_sparse_set_rt<Entity>(8);
+  auto& set3 = arena.create_gen_sparse_set_rt<Entity>(8);
+
+  // Test that identical operations produce identical IDs
+  GenId id1 = set1.add(Entity{1, "First"});
+  GenId id2 = set2.add(Entity{2, "First"});
+  GenId id3 = set3.add(Entity{3, "First"});
+
+  // IDs should be identical since operations were the same
+  LOG_ASSERT(id1.id() == id2.id() && id2.id() == id3.id(), failedMsg);
+  LOG_ASSERT(id1.gen() == id2.gen() && id2.gen() == id3.gen(), failedMsg);
+
+  // Test removal synchronization
+  set1.remove(id1);
+  set2.remove(id2);
+  set3.remove(id3);
+
+  // Adding new elements should reuse the same slots with incremented generations
+  GenId new_id1 = set1.add(Entity{4, "Second"});
+  GenId new_id2 = set2.add(Entity{5, "Second"});
+  GenId new_id3 = set3.add(Entity{6, "Second"});
+
+  // New IDs should match and have incremented generations
+  LOG_ASSERT(new_id1.id() == new_id2.id() && new_id2.id() == new_id3.id(), failedMsg);
+  LOG_ASSERT(new_id1.gen() == new_id2.gen() && new_id2.gen() == new_id3.gen(), failedMsg);
+  LOG_ASSERT(new_id1.gen() == id1.gen() + 1, failedMsg);
+
+  delete &arena;
+  LOG_TRACE("[ PASSED ] gen_sparse_set_rt_determinism_test");
+}
+
 // NOTE: File I/O
 void file_io_test() {
   const char* failedMsg = "[ FAILED ] create_and_remove_file_test, please clean up";

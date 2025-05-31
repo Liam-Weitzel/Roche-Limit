@@ -414,7 +414,7 @@ target_compile_options(client_test PRIVATE
 )
 
 target_compile_definitions(client_test PRIVATE 
-    CLIENT_LIB_PATH="./libclient.${LIB_EXTENSION}"
+    CLIENT_LIB_PATH="./lib_client.${LIB_EXTENSION}"
 )
 
 # Create the main executable

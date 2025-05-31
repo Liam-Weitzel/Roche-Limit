@@ -29,6 +29,8 @@ int main() {
     create_arena_clear_test();
     gen_sparse_set_ct_test();
     gen_sparse_set_rt_test();
+    gen_sparse_set_ct_determinism_test();
+    gen_sparse_set_rt_determinism_test();
     file_io_test();
 
     client.unload();
