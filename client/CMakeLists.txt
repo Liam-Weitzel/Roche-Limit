@@ -468,5 +468,10 @@ add_dependencies(client_test client_lib)
 
 #TODO:
 # - msvc compiler flags (resolve warnings...)
+# - FAIL GITHUB WORKFLOW ON TEST FAILURES/ PREP MODEL FAILURES!!
 # - clang compiler flags (I think some of them are being ignored because of the order)
-# - all platforms: add performance tests to build & actions
+# - all platforms: add performance tests to build & workflow
+
+#TODO:
+# - make repo private, use x11 and wayland self-hosted runners... use nextcloud for storage
+# - create cronned nightly release pipeline & on release deploy to steam pipeline...

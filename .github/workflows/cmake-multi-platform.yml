@@ -7,39 +7,38 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  build-test:
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: [self-hosted, Windows, x64] # Lenovo ThinkPad T410
+          - os: [self-hosted, Windows, X64] # Lenovo ThinkPad T410
             os-name: windows
             c_compiler: cl
             cpp_compiler: cl
             arch: x64
-          - os: ubuntu-24.04
+          - os: [self-hosted, Linux, X64, X11] # Liam-Desktop
             os-name: linux
             c_compiler: gcc
             cpp_compiler: g++
             arch: x64
             display: x11
-          - os: ubuntu-24.04
+          - os: [self-hosted, Linux, X64, Wayland] # Liam-Desktop
             os-name: linux
             c_compiler: gcc
             cpp_compiler: g++
             arch: x64
             display: wayland
-          - os: [self-hosted, macOS, x64] # 2015-MacBook-Air
+          - os: [self-hosted, macOS, X64] # 2015-MacBook-Air
             os-name: mac
             c_compiler: clang
             cpp_compiler: clang++
             arch: x64
-            osx_deployment_target: "10.14.6"
 
     steps:
-    - name: Clean & Clone
+    - name: Clean & clone
       shell: bash
       working-directory: ${{ github.workspace }}/..
       run: |
@@ -52,92 +51,21 @@ jobs:
 
     - name: Setup
       shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        AWS_DEFAULT_REGION: eu-central-1
       run: |
-        if [ "${{ matrix.os-name }}" = "linux" ]; then
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake \
-            gcc \
-            g++ \
-            libx11-dev \
-            xorg-dev \
-            unzip \
-            wget
-
-          wget -q ${{ secrets.RESSPACKER_URL }} -O rrespacker.zip
-          unzip -q rrespacker.zip -d ${{ github.workspace }}/client/libs/rrespacker/
-          chmod +x ${{ github.workspace }}/client/libs/rrespacker/*
-
-          wget -q ${{ secrets.STEAM_SDK_URL }} -O steam_sdk.zip
-          unzip -q steam_sdk.zip -d ${{ github.workspace }}/libs/steam/
-
-          if [ "${{ matrix.display }}" = "x11" ]; then
-            sudo apt-get install -y \
-              xvfb
-          fi
-
-          if [ "${{ matrix.display }}" = "wayland" ]; then
-            sudo apt-get install -y \
-              sway \
-              xwayland \
-              libegl1-mesa-dev \
-              libwayland-dev \
-              wayland-protocols \
-              libxkbcommon-dev \
-              libffi-dev \
-              seatd
-
-            # Get the correct XDG_RUNTIME_DIR
-            export XDG_RUNTIME_DIR=/run/user/$(id -u)
-            mkdir -p $XDG_RUNTIME_DIR
-            chmod 700 $XDG_RUNTIME_DIR
-
-            # Create seat group and add runner user
-            sudo groupadd seat
-            sudo usermod -aG seat runner
-
-            # Start seatd daemon
-            sudo /usr/sbin/seatd -g seat &
-            export LIBSEAT_BACKEND=seatd
-
-            # Create minimal Sway config
-            printf "bar {\n    mode invisible\n    status_command \"\"\n    tray_output none\n}\n" > $XDG_RUNTIME_DIR/config
-
-            # Export variables for subsequent steps
-            echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> $GITHUB_ENV
-            echo "WAYLAND_DISPLAY=wayland-1" >> $GITHUB_ENV
-            echo "XDG_SESSION_TYPE=wayland" >> $GITHUB_ENV
-            echo "WLR_NO_HARDWARE_CURSORS=1" >> $GITHUB_ENV
-            echo "WLR_RENDERER=pixman" >> $GITHUB_ENV
-            echo "DISPLAY=:0" >> $GITHUB_ENV
-            echo "SWAYSOCK=$XDG_RUNTIME_DIR/sway-ipc.sock" >> $GITHUB_ENV
-            echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib/wayland:/usr/lib/libxkbcommon:/usr/lib/libffi:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          fi
-        fi
-        if [ "${{ matrix.os-name }}" = "mac" ]; then
-          if ! command -v brew &> /dev/null; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-          fi
-
-          brew install \
-            cmake \
-            wget
-
-          wget -q ${{ secrets.RESSPACKER_URL }} -O rrespacker.zip
-          unzip -q rrespacker.zip -d ${{ github.workspace }}/client/libs/rrespacker/
-          chmod +x ${{ github.workspace }}/client/libs/rrespacker/*
-
-          wget -q ${{ secrets.STEAM_SDK_URL }} -O steam_sdk.zip
-          unzip -q steam_sdk.zip -d ${{ github.workspace }}/libs/steam/
-        fi
+        aws s3 cp "s3://${{ secrets.AWS_S3_BUCKET }}/rrespacker.zip" rrespacker.zip
+        aws s3 cp "s3://${{ secrets.AWS_S3_BUCKET }}/steam_sdk.zip" steam_sdk.zip
         if [ "${{ matrix.os-name }}" = "windows" ]; then
-          /c/Users/runner/Downloads/wget.exe -q "${{ secrets.RESSPACKER_URL }}" -O rrespacker.zip
           unzip -oq rrespacker.zip 'rrespacker.exe' -d "${{ github.workspace }}/client/libs/rrespacker/"
-
-          /c/Users/runner/Downloads/wget.exe -q "${{ secrets.STEAM_SDK_URL }}" -O steam_sdk.zip
           unzip -oq steam_sdk.zip -d "${{ github.workspace }}/libs/steam/"
+        fi
+        if [[ "${{ matrix.os-name }}" = "linux" || "${{ matrix.os-name }}" = "mac" ]]; then
+          unzip -q rrespacker.zip -d ${{ github.workspace }}/client/libs/rrespacker/
+          chmod +x ${{ github.workspace }}/client/libs/rrespacker/*
+          unzip -q steam_sdk.zip -d ${{ github.workspace }}/libs/steam/
         fi
 
     - name: Build client
@@ -156,34 +84,15 @@ jobs:
         -S ..
         cmake --build . -j$(nproc) --verbose
 
-    - name: Test Client (Linux)
-      if: matrix.os-name == 'linux'
-      shell: bash
-      working-directory: ${{ github.workspace }}/client
-      run: |
-        if [ "${{ matrix.display }}" = "x11" ]; then
-          xvfb-run ./prep_models
-          pkill -9 Xvfb || true
-          sleep 3
-          xvfb-run -a ./client_test
-        fi
-        if [ "${{ matrix.display }}" = "wayland" ]; then
-          # Start Sway in headless mode
-          WLR_BACKENDS=headless sway --verbose --config $XDG_RUNTIME_DIR/config &
-          sleep 10
-          ./prep_models
-          ./client_test
-        fi
-
-    - name: Test Client (Mac)
-      if: matrix.os-name == 'mac'
+    - name: Test client (Unix)
+      if: matrix.os-name == 'linux' || matrix.os-name == 'mac'
       shell: bash
       working-directory: ${{ github.workspace }}/client
       run: |
         ./prep_models
         ./client_test
 
-    - name: Test Client (Windows)
+    - name: Test client (Windows)
       if: matrix.os-name == 'windows'
       shell: cmd
       working-directory: ${{ github.workspace }}/client
@@ -191,21 +100,36 @@ jobs:
         prep_models.exe
         client_test.exe
 
-    - name: Upload client artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: client-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}
-        path: |
-          client/client
-          client/client.exe
-          client/resources.rres
-          client/lib_client.so
-          client/libsteam_api.so
-          client/lib_client.dylib
-          client/libsteam_api.dylib
-          client/lib_client.dll
-          client/steam_api64.dll
-        if-no-files-found: warn
+    - name: Zip client
+      shell: bash
+      run: |
+        files=()
+        while IFS= read -r file; do
+          files+=("$file")
+        done < <(
+          for f in client/client.exe client/client client/client_test.exe client/client_test client/resources.rres client/lib_client.so client/lib_client.dll client/lib_client.dylib client/libsteam_api.so client/libsteam_api.dll client/libsteam_api.dylib client/steam_appid.txt; do
+            [[ -f $f ]] && echo "$f"
+          done | sort -u
+        )
+
+        if [[ "${{ matrix.os-name }}" == "windows" ]]; then
+          temp_files=()
+          while IFS= read -r file; do
+            temp_files+=("$file")
+          done < <(printf '%s\n' "${files[@]}" | xargs -I{} cygpath -w "{}" | sort -u)
+          files=("${temp_files[@]}")
+        fi
+
+        zip $([[ "${{ matrix.os-name }}" == "windows" ]] && echo "a") client-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}-${{ github.sha }}.zip "${files[@]}"
+
+    - name: Upload client
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        AWS_DEFAULT_REGION: eu-central-1
+      run: |
+        aws s3 cp ./client-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}-${{ github.sha }}.zip s3://${{ secrets.AWS_S3_BUCKET }}
 
     - name: Build server
       shell: bash
@@ -222,32 +146,53 @@ jobs:
         -S ..
         cmake --build . -j$(nproc) --verbose
 
-    - name: Test Server (Linux)
-      if: matrix.os-name == 'linux'
+    - name: Test server (Unix)
+      if: matrix.os-name == 'linux' || matrix.os-name == 'mac'
       shell: bash
+      working-directory: ${{ github.workspace }}/server
       run: |
-        echo "To be implemented"
+        echo "dummy"
 
-    - name: Test Server (Mac)
-      if: matrix.os-name == 'mac'
-      shell: bash
-      run: |
-        echo "To be implemented"
-
-    - name: Test Server (Windows)
+    - name: Test server (Windows)
       if: matrix.os-name == 'windows'
       shell: cmd
+      working-directory: ${{ github.workspace }}/server
       run: |
-        echo "To be implemented"
+        echo dummy
 
-    - name: Upload server artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: server-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}
-        path: ${{ github.workspace }}/server/build/Makefile #dummy
+    - name: Zip server
+      shell: bash
+      run: |
+        files=()
+        while IFS= read -r file; do
+          files+=("$file")
+        done < <(
+          for f in server/CMakeLists.txt; do
+            [[ -f $f ]] && echo "$f"
+          done | sort -u
+        )
+
+        if [[ "${{ matrix.os-name }}" == "windows" ]]; then
+          temp_files=()
+          while IFS= read -r file; do
+            temp_files+=("$file")
+          done < <(printf '%s\n' "${files[@]}" | xargs -I{} cygpath -w "{}" | sort -u)
+          files=("${temp_files[@]}")
+        fi
+
+        zip $([[ "${{ matrix.os-name }}" == "windows" ]] && echo "a") server-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}-${{ github.sha }}.zip "${files[@]}"
+
+    - name: Upload server
+      shell: bash
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+        AWS_DEFAULT_REGION: eu-central-1
+      run: |
+        aws s3 cp ./server-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}-${{ github.sha }}.zip s3://${{ secrets.AWS_S3_BUCKET }}
 
   notify-discord:
-    needs: build
+    needs: build-test
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -256,5 +201,5 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d "{\"content\": \"Build matrix finished with status: ${{ needs.build.result }}.\"}" \
+               -d "{\"content\": \"${{ needs.build-test.result }}.\"}" \
                "${{ secrets.DISCORD_WEBHOOK_URL }}"
