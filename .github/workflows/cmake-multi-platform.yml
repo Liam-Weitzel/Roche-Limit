@@ -142,6 +142,7 @@ jobs:
 
     - name: Build client
       working-directory: ${{ github.workspace }}/client
+      shell: bash
       run: |
         mkdir build/
         cd build/
@@ -207,6 +208,7 @@ jobs:
         if-no-files-found: warn
 
     - name: Build server
+      shell: bash
       run: |
         cd "${{ github.workspace }}/server"
         mkdir build/
@@ -243,3 +245,12 @@ jobs:
       with:
         name: server-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}
         path: ${{ github.workspace }}/server/build/Makefile #dummy
+
+    - name: Notify Discord
+      shell: bash
+      if: always()
+      run: |
+        curl -H "Content-Type: application/json" \
+             -X POST \
+             -d "{\"content\": \"Build for OS=${{ matrix.os-name }} ARCH=${{ matrix.arch }} finished with status: ${{ job.status }}.\"}" \
+             "${{ secrets.DISCORD_WEBHOOK_URL }}"
