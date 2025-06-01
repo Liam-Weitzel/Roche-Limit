@@ -157,6 +157,11 @@ else()
     set(LIB_EXTENSION "so")
 endif()
 
+# Create all targets in CMAKE_SOURCE_DIR
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}>")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "$<1:${CMAKE_SOURCE_DIR}>")
+
 # Create shared library
 add_library(client_lib SHARED ${LIB_SOURCES})
 
@@ -164,14 +169,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_set_sanitizers(client_lib)
 endif()
 
-# Set library properties
-set_target_properties(client_lib PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
-
-# Platform-specific tweaks
+# Platform-specific naming tweaks
 if(WIN32)
     set_target_properties(client_lib PROPERTIES
         OUTPUT_NAME "lib_client"
@@ -333,12 +331,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_set_sanitizers(prep_models)
 endif()
 
-# Set output directory for prep_models
-set_target_properties(prep_models PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
-
 target_include_directories(prep_models PRIVATE 
     ${COMMON_INCLUDE_DIRS}
     ${STEAM_DIR}
@@ -379,12 +371,6 @@ add_executable(client_test ${CMAKE_SOURCE_DIR}/src/main_test.cpp ${LIB_SOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_set_sanitizers(client_test)
 endif()
-
-# Set output directory for client_test
-set_target_properties(client_test PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
 
 target_include_directories(client_test PRIVATE 
     ${COMMON_INCLUDE_DIRS}
@@ -430,12 +416,6 @@ add_executable(client src/main.cpp)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     target_set_sanitizers(client)
 endif()
-
-# Set executable output directory
-set_target_properties(client PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-)
 
 # Include directories for the main executable
 target_include_directories(client PRIVATE 

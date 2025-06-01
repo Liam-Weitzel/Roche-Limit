@@ -134,7 +134,7 @@ jobs:
         fi
         if [ "${{ matrix.os-name }}" = "windows" ]; then
           /c/Users/runner/Downloads/wget.exe -q "${{ secrets.RESSPACKER_URL }}" -O rrespacker.zip
-          unzip -oq rrespacker.zip -d "${{ github.workspace }}/client/libs/rrespacker/"
+          unzip -oq rrespacker.zip 'rrespacker.exe' -d "${{ github.workspace }}/client/libs/rrespacker/"
 
           /c/Users/runner/Downloads/wget.exe -q "${{ secrets.STEAM_SDK_URL }}" -O steam_sdk.zip
           unzip -oq steam_sdk.zip -d "${{ github.workspace }}/libs/steam/"
@@ -246,11 +246,15 @@ jobs:
         name: server-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}
         path: ${{ github.workspace }}/server/build/Makefile #dummy
 
-    - name: Notify Discord
-      shell: bash
-      if: always()
-      run: |
-        curl -H "Content-Type: application/json" \
-             -X POST \
-             -d "{\"content\": \"Build for OS=${{ matrix.os-name }} ARCH=${{ matrix.arch }} finished with status: ${{ job.status }}.\"}" \
-             "${{ secrets.DISCORD_WEBHOOK_URL }}"
+  notify-discord:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify Discord
+        shell: bash
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"Build matrix finished with status: ${{ needs.build.result }}.\"}" \
+               "${{ secrets.DISCORD_WEBHOOK_URL }}"
