@@ -38,16 +38,35 @@ jobs:
             arch: x64
 
     steps:
-    - name: Clean & clone
+    - name: Checkout
       shell: bash
       working-directory: ${{ github.workspace }}/..
       run: |
-        rm -rf ./Roche-Limit
-        git clone https://github.com/Liam-Weitzel/Roche-Limit Roche-Limit
-        cd Roche-Limit
-        git checkout "${{ github.sha }}"
-        git submodule sync --recursive
-        git submodule update --init --recursive --depth=1
+        if [ -d "Roche-Limit" ]; then
+          echo "Cached repo found, updating..."
+          cd Roche-Limit
+          git fetch
+          git checkout "${{ github.sha }}"
+        else
+          echo "No cached repo, cloning fresh..."
+          git clone https://github.com/Liam-Weitzel/Roche-Limit Roche-Limit
+          cd Roche-Limit
+          git checkout "${{ github.sha }}"
+        fi
+        
+        echo "Checking submodules..."
+        # Try submodule update with retries
+        for i in 1 2 3; do
+          echo "Attempt $i of 3"
+          if git submodule sync --recursive && git submodule update --init --recursive --depth=1; then
+            echo "Success!"
+            exit 0
+          fi
+          echo "Failed, waiting before retry..."
+          sleep 10
+        done
+        echo "All attempts failed"
+        exit 1
 
     - name: Setup
       shell: bash
@@ -56,23 +75,35 @@ jobs:
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
         AWS_DEFAULT_REGION: eu-central-1
       run: |
-        aws s3 cp "s3://${{ secrets.AWS_S3_BUCKET }}/rrespacker.zip" rrespacker.zip
-        aws s3 cp "s3://${{ secrets.AWS_S3_BUCKET }}/steam_sdk.zip" steam_sdk.zip
+        if [ ! -f "rrespacker.zip" ]; then
+          aws s3 cp "s3://${{ secrets.AWS_S3_BUCKET }}/rrespacker.zip" rrespacker.zip
+        fi
+        if [ ! -f "steam_sdk.zip" ]; then
+          aws s3 cp "s3://${{ secrets.AWS_S3_BUCKET }}/steam_sdk.zip" steam_sdk.zip
+        fi
         if [ "${{ matrix.os-name }}" = "windows" ]; then
-          unzip -oq rrespacker.zip 'rrespacker.exe' -d "${{ github.workspace }}/client/libs/rrespacker/"
-          unzip -oq steam_sdk.zip -d "${{ github.workspace }}/libs/steam/"
+          if [ ! -f "${{ github.workspace }}/client/libs/rrespacker/rrespacker.exe" ]; then
+            unzip -oq rrespacker.zip 'rrespacker.exe' -d "${{ github.workspace }}/client/libs/rrespacker/"
+          fi
+          if [ ! -d "${{ github.workspace }}/libs/steam" ] || [ -z "$(ls -A ${{ github.workspace }}/libs/steam)" ]; then
+            unzip -oq steam_sdk.zip -d "${{ github.workspace }}/libs/steam/"
+          fi
         fi
         if [[ "${{ matrix.os-name }}" = "linux" || "${{ matrix.os-name }}" = "mac" ]]; then
-          unzip -q rrespacker.zip -d ${{ github.workspace }}/client/libs/rrespacker/
-          chmod +x ${{ github.workspace }}/client/libs/rrespacker/*
-          unzip -q steam_sdk.zip -d ${{ github.workspace }}/libs/steam/
+          if [ ! -f "${{ github.workspace }}/client/libs/rrespacker/rrespacker" ]; then
+            unzip -q rrespacker.zip -d "${{ github.workspace }}/client/libs/rrespacker/"
+            chmod +x ${{ github.workspace }}/client/libs/rrespacker/*
+          fi
+          if [ ! -d "${{ github.workspace }}/libs/steam" ] || [ -z "$(ls -A ${{ github.workspace }}/libs/steam)" ]; then
+            unzip -q steam_sdk.zip -d "${{ github.workspace }}/libs/steam/"
+          fi
         fi
 
     - name: Build client
       working-directory: ${{ github.workspace }}/client
       shell: bash
       run: |
-        mkdir build/
+        mkdir -p build/
         cd build/
         cmake \
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
@@ -132,10 +163,10 @@ jobs:
         aws s3 cp ./client-${{ matrix.os-name }}-${{ matrix.arch }}${{ matrix.os-name == 'linux' && format('-{0}', matrix.display) || '' }}-${{ github.sha }}.zip s3://${{ secrets.AWS_S3_BUCKET }}
 
     - name: Build server
+      working-directory: ${{ github.workspace }}/server
       shell: bash
       run: |
-        cd "${{ github.workspace }}/server"
-        mkdir build/
+        mkdir -p build/
         cd build/
         cmake \
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
