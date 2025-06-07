@@ -1,0 +1,22 @@
+#
+# rgl layout text file (v4.0) - raygui layout file generated using rGuiLayout
+#
+# Number of controls:     11
+#
+# Ref. window:    r <x> <y> <width> <height>
+# Anchor info:    a <id> <name> <posx> <posy> <enabled>
+# Control info:   c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 40 -1 -1
+a 001 anchor01 168 120 1
+c 000 0 shaderSettingsBox 0 0 272 272 1 Shadow Shader Settings
+c 001 17 shadowMapResolutionSlider 144 32 120 16 1 ShadowMapResolution
+c 002 17 selfShadowIntensitySlider 144 56 120 16 1 SelfShadowIntensity
+c 003 17 poissonDiskScaleSlider 144 104 120 16 1 PoissonDiskScale
+c 004 17 shadowBiasFactorSlider 144 128 120 16 1 ShadowBiasFactor
+c 005 17 shadowBiasMinSlider 144 152 120 16 1 ShadowBiasMin
+c 006 17 poissonSamplesSlider 144 176 120 16 1 PoissonSamples
+c 007 17 shadowDarknessSlider 144 200 120 16 1 ShadowDarkness
+c 008 17 ambientDivisionSlider 144 224 120 16 1 AmbientDivision
+c 009 17 specularPowerSlider 144 80 120 16 1 SpecularPower
+c 010 17 gammaSlider 144 248 120 16 1 Gamma

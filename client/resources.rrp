@@ -16,5 +16,7 @@ f ./resources/models/rover_body.bin@rover_body.bin,0,0,0,0,0
 f ./resources/models/rover_scan.bin@rover_scan.bin,0,0,0,0,0
 f ./resources/models/rover_wheel.bin@rover_wheel.bin,0,0,0,0,0
 
-f ./resources/shaders/shadowmap.fs@shadowmap.fs,0,0,0,0,0
-f ./resources/shaders/shadowmap.vs@shadowmap.vs,0,0,0,0,0
+f ./resources/shaders/shadowmap_120.fs@shadowmap_120.fs,0,0,0,0,0
+f ./resources/shaders/shadowmap_120.vs@shadowmap_120.vs,0,0,0,0,0
+f ./resources/shaders/shadowmap_330.fs@shadowmap_330.fs,0,0,0,0,0
+f ./resources/shaders/shadowmap_330.vs@shadowmap_330.vs,0,0,0,0,0

@@ -1,13 +1,12 @@
-#version 120
-
-// This shader is based on the basic lighting shader
-// This only supports one light, which is directional, and it (of course) supports shadows
+#version 330 core
 
 // Input vertex attributes (from vertex shader)
-varying vec3 fragPosition;
-varying vec2 fragTexCoord;
-//varying in vec4 fragColor;
-varying vec3 fragNormal;
+in vec3 fragPosition;
+in vec2 fragTexCoord;
+in vec3 fragNormal;
+
+// Output fragment color
+out vec4 FragColor;
 
 // Input uniform values
 uniform sampler2D texture0;
@@ -24,7 +23,7 @@ uniform mat4 lightVP; // Light source view-projection matrix
 uniform sampler2D shadowMap;
 
 // Expanded Poisson disk samples for better quality
-vec2 poissonDisk[16] = vec2[](
+const vec2 poissonDisk[16] = vec2[](
     vec2(-0.94201624, -0.39906216),
     vec2(0.94558609, -0.76890725),
     vec2(-0.094184101, -0.92938870),
@@ -50,22 +49,21 @@ float random(vec3 seed, int i) {
     return fract(sin(dot_product) * 43758.5453);
 }
 
-uniform int shadowMapResolution;
-
 // Customizable parameters as uniforms
-uniform float SELF_SHADOW_INTENSITY = 1.0;    // Controls darkness of faces facing away from light
-uniform float SPECULAR_POWER = 16.0;          // Controls shininess/specular highlight size
-uniform float POISSON_DISK_SCALE = 1500.0;    // Controls shadow softness (higher = harder)
-uniform float SHADOW_BIAS_FACTOR = 0.00008;   // Controls shadow bias primary factor
-uniform float SHADOW_BIAS_MIN = 0.000008;     // Controls shadow bias minimum
-uniform int POISSON_SAMPLES = 6;              // Number of shadow samples
-uniform float SHADOW_DARKNESS = 0.16;          // How much each sample darkens (currently 0.1)
-uniform float AMBIENT_DIVISION = 20.0;        // Controls ambient light intensity
-uniform float GAMMA = 2.2;                    // Gamma correction value
+uniform int shadowMapResolution;
+uniform float SELF_SHADOW_INTENSITY;    // Controls darkness of faces facing away from light
+uniform float SPECULAR_POWER;           // Controls shininess/specular highlight size
+uniform float POISSON_DISK_SCALE;       // Controls shadow softness (higher = harder)
+uniform float SHADOW_BIAS_FACTOR;       // Controls shadow bias primary factor
+uniform float SHADOW_BIAS_MIN;          // Controls shadow bias minimum
+uniform int POISSON_SAMPLES;            // Number of shadow samples
+uniform float SHADOW_DARKNESS;          // How much each sample darkens
+uniform float AMBIENT_DIVISION;         // Controls ambient light intensity
+uniform float GAMMA;                    // Gamma correction value
 
 void main()
 {
-    vec4 texelColor = texture2D(texture0, fragTexCoord);
+    vec4 texelColor = texture(texture0, fragTexCoord);
     vec3 lightDot = vec3(0.0);
     vec3 normal = normalize(fragNormal);
     vec3 viewD = normalize(viewPos - fragPosition);
@@ -99,7 +97,7 @@ void main()
         float rnd = random(gl_FragCoord.xyz, i);
         int index = int(floor(rnd * 16.0));
         
-        float sampleDepth = texture2D(shadowMap, sampleCoords + poissonDisk[index]/POISSON_DISK_SCALE).r;
+        float sampleDepth = texture(shadowMap, sampleCoords + poissonDisk[index]/POISSON_DISK_SCALE).r;
         if (curDepth - bias > sampleDepth) {
             visibility -= SHADOW_DARKNESS;
         }
@@ -112,5 +110,5 @@ void main()
 
     // Parameterized gamma correction
     finalColor = pow(finalColor, vec4(1.0/GAMMA));
-    gl_FragColor = finalColor;
+    FragColor = finalColor;
 }

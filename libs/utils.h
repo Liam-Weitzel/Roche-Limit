@@ -1552,6 +1552,3 @@ bool CompareFloatArrays(const float *a, const float *b, uint32_t size);
 bool CompareUCharArrays(const unsigned char *a, const unsigned char *b, uint32_t size);
 bool CompareUIntArrays(const unsigned int *a, const unsigned int *b, uint32_t size);
 bool CompareUShortArrays(const unsigned short *a, const unsigned short *b, uint32_t size);
-
-// NOTE: Direct std:: replacements
-float Clamp(float value, float min, float max);

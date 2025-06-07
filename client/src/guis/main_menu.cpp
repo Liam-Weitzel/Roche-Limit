@@ -1,7 +1,5 @@
 #include "main_menu.h"
 #include "game_state.h"
-#include "raygui.h"
-#include "raylib.h"
 #include "utils_client.h"
 #include <cmath>
 

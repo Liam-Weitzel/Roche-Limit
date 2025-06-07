@@ -1,3 +1,10 @@
+#TODO:
+# - msvc compiler flags (resolve warnings...)
+# - FAIL GITHUB WORKFLOW ON TEST FAILURES/ PREP MODEL FAILURES!!
+# - clang compiler flags (I think some of them are being ignored because of the order)
+# - all platforms: add performance tests to build & workflow
+# - on release deploy to steam pipeline...
+
 cmake_minimum_required(VERSION 3.10)
 project(client)
 
@@ -83,8 +90,8 @@ if(UNIX AND NOT APPLE)
         endif()
     endif()
 
-    find_package(OpenGL)
-    find_package(Threads)
+    find_package(OpenGL REQUIRED)
+    find_package(Threads REQUIRED)
 endif()
 
 # Build raylib with platform-appropriate settings
@@ -106,7 +113,19 @@ endif()
 # Common raylib settings
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
-set(OPENGL_VERSION "2.1" CACHE STRING "" FORCE)
+if(APPLE)
+    set(OPENGL_VERSION "3.3" CACHE STRING "" FORCE)
+    message(STATUS "macOS detected - using OpenGL 3.3")
+else()
+    if(EXISTS "${OPENGL_INCLUDE_DIR}/GL/gl3.h" OR 
+       EXISTS "${OPENGL_INCLUDE_DIR}/GL/glcorearb.h")
+        message(STATUS "Found OpenGL 3.3 headers")
+        set(OPENGL_VERSION "3.3" CACHE STRING "" FORCE)
+    else()
+        message(STATUS "Falling back to OpenGL 2.1")
+        set(OPENGL_VERSION "2.1" CACHE STRING "" FORCE)
+    endif()
+endif()
 
 # Add raylib
 add_subdirectory(libs/raylib)
@@ -125,11 +144,13 @@ target_include_directories(external_libs SYSTEM INTERFACE
 # Define source files for the shared library
 set(LIB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/client.cpp
+    ${CMAKE_SOURCE_DIR}/libs/ray.cpp
     ${CMAKE_SOURCE_DIR}/libs/utils_client.cpp
     ${CMAKE_SOURCE_DIR}/../libs/utils.cpp
     ${CMAKE_SOURCE_DIR}/../libs/utils_test.cpp
     ${CMAKE_SOURCE_DIR}/src/guis/main_menu.cpp
     ${CMAKE_SOURCE_DIR}/src/guis/settings_menu.cpp
+    ${CMAKE_SOURCE_DIR}/src/guis/shader_settings_menu.cpp
 )
 
 # Define include directories
@@ -466,12 +487,3 @@ add_custom_command(TARGET client POST_BUILD
 add_dependencies(client client_lib)
 add_dependencies(client_test client_lib)
 
-#TODO:
-# - msvc compiler flags (resolve warnings...)
-# - FAIL GITHUB WORKFLOW ON TEST FAILURES/ PREP MODEL FAILURES!!
-# - clang compiler flags (I think some of them are being ignored because of the order)
-# - all platforms: add performance tests to build & workflow
-
-#TODO:
-# - make repo private, use x11 and wayland self-hosted runners... use nextcloud for storage
-# - create cronned nightly release pipeline & on release deploy to steam pipeline...

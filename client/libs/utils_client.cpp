@@ -1,4 +1,5 @@
 #include "utils_client.h"
+#include "game_state.h"
 
 // NOTE: Load model from chunk for use with rres
 Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena& arena) {

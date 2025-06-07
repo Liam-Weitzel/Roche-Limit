@@ -1,83 +1,25 @@
 #include "settings_menu.h"
 #include "game_state.h"
-#include "raygui.h"
-#include "raylib.h"
-#include "utils_client.h"
-#include "rini.h"
+#include "ray.h"
 #include <cmath>
 
-void ClampSettingsMenuPosition(SettingsMenu& sm, float screenWidth, float screenHeight) {
-    // Calculate maximum allowed positions
-    float maxX = screenWidth - sm.layoutRecs[0].width/2;
-    float minX = sm.layoutRecs[0].width/2;
-    float maxY = screenHeight - sm.layoutRecs[0].height/2;
-    float minY = sm.layoutRecs[0].height/2;
-    
-    // Clamp the anchor position
-    sm.anchor01.x = Clamp(sm.anchor01.x, minX, maxX);
-    sm.anchor01.y = Clamp(sm.anchor01.y, minY, maxY);
-}
-
-void UpdateSettingsMenu(SettingsMenu& sm, Settings& s) {
-  if(!sm.active) return;
-
-  Vector2 mousePos = GetMousePosition();
-  Rectangle windowRect = {
-    sm.layoutRecs[0].x,
-    sm.layoutRecs[0].y,
-    sm.layoutRecs[0].width,
-    25  // Height of drag area
-  };
-
-  // Start dragging
-  if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, windowRect)) {
-    sm.isDragging = true;
-    sm.dragOffset = {
-      sm.anchor01.x - mousePos.x,
-      sm.anchor01.y - mousePos.y
-    };
+void UpdateSettings(GameState& state) {
+  // Update UI Style
+  if(state.renderResources.gui->loaded_style != state.settings.uiStyle) {
+    if (strcmp(state.renderResources.gui->styles[state.settings.uiStyle], "default") == 0) GuiLoadStyleDefault();
+    else {
+        int idStyle = rresGetResourceId(*state.renderResources.dir, state.renderResources.gui->styles[state.settings.uiStyle]);
+        rresResourceChunk chunkStyle = rresLoadResourceChunk("resources.rres", idStyle);
+        if(UnpackResourceChunk(&chunkStyle) == RRES_SUCCESS) {
+            LoadGuiStyle((const unsigned char*) chunkStyle.data.raw, chunkStyle.info.baseSize);
+        }
+        rresUnloadResourceChunk(chunkStyle);
+    }
+    state.renderResources.gui->loaded_style = state.settings.uiStyle;
   }
 
-  // Continue dragging
-  if (sm.isDragging && IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-    sm.anchor01.x = mousePos.x + sm.dragOffset.x;
-    sm.anchor01.y = mousePos.y + sm.dragOffset.y;
-    sm.dirty = true;
-  }
-
-  // Stop dragging
-  if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-    sm.isDragging = false;
-  }
-
-  if(IsWindowResized()) sm.dirty = true;
-  if(sm.dirty) {
-    sm.dirty = false;
-    float width = GetScreenWidth();
-    float height = GetScreenHeight();
-
-    UIScale scale = CalculateUIScale(s.uiScale);
-
-    // Scale the base font size (12) with the UI
-    int scaledFontSize = (int)ScaleSize(12.0f, scale.uniformScale);
-    GuiSetStyle(DEFAULT, TEXT_SIZE, scaledFontSize);
-
-    // Ensure window stays in bounds after scaling
-    ClampSettingsMenuPosition(sm, width, height);
-
-    sm.layoutRecs[0] = { sm.anchor01.x + ScaleSize(-96, scale.uniformScale), sm.anchor01.y + ScaleSize(-124, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(248, scale.uniformScale) };    // GroupBox: settingsGroupBox
-    sm.layoutRecs[1] = { sm.anchor01.x + ScaleSize(-24, scale.uniformScale), sm.anchor01.y + ScaleSize(28, scale.uniformScale), ScaleSize(80, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // Spinner: uiStyleSpinner
-    sm.layoutRecs[2] = { sm.anchor01.x + ScaleSize(-24, scale.uniformScale), sm.anchor01.y + ScaleSize(-92, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // SliderBar: musicSliderBar
-    sm.layoutRecs[3] = { sm.anchor01.x + ScaleSize(-24, scale.uniformScale), sm.anchor01.y + ScaleSize(-68, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // SliderBar: sfxSliderBar
-    sm.layoutRecs[4] = { sm.anchor01.x + ScaleSize(-24, scale.uniformScale), sm.anchor01.y + ScaleSize(-4, scale.uniformScale), ScaleSize(72, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // ValueBOx: fpsValueBox
-    sm.layoutRecs[5] = { sm.anchor01.x + ScaleSize(-96, scale.uniformScale), sm.anchor01.y + ScaleSize(-52, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // Line: Line
-    sm.layoutRecs[6] = { sm.anchor01.x + ScaleSize(-24, scale.uniformScale), sm.anchor01.y + ScaleSize(60, scale.uniformScale), ScaleSize(112, scale.uniformScale), ScaleSize(16, scale.uniformScale) };    // Slider: uiScaleSlider
-    sm.layoutRecs[7] = { sm.anchor01.x + ScaleSize(-24, scale.uniformScale), sm.anchor01.y + ScaleSize(-36, scale.uniformScale), ScaleSize(96, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // DropdownBox: screenDropdownBox
-    sm.layoutRecs[8] = { sm.anchor01.x + ScaleSize(-72, scale.uniformScale), sm.anchor01.y + ScaleSize(-36, scale.uniformScale), ScaleSize(56, scale.uniformScale), ScaleSize(24, scale.uniformScale) };    // Label: screenLabel
-    sm.layoutRecs[9] = { sm.anchor01.x + ScaleSize(-96, scale.uniformScale), sm.anchor01.y + ScaleSize(76, scale.uniformScale), ScaleSize(192, scale.uniformScale), ScaleSize(16, scale.uniformScale)}; // Line: Line2
-    sm.layoutRecs[10] = { sm.anchor01.x + ScaleSize(-88, scale.uniformScale), sm.anchor01.y + ScaleSize(92, scale.uniformScale), ScaleSize(80, scale.uniformScale), ScaleSize(24, scale.uniformScale)}; // Button: cancelButton
-    sm.layoutRecs[11] = { sm.anchor01.x + ScaleSize(8, scale.uniformScale), sm.anchor01.y + ScaleSize(92, scale.uniformScale), ScaleSize(80, scale.uniformScale), ScaleSize(24, scale.uniformScale)}; // Button: applyButton
-  }
+  // Update target fps
+  SetTargetFPS(state.settings.fpsLimit);
 }
 
 void DrawSettingsMenu(GameState& state) {
@@ -152,9 +94,9 @@ void ApplyButton(GameState& state) {
 
   rini_unload_config(&config);
 
-  // TODO: UpdateSettings(state);
+  UpdateSettings(state);
 
-  // gui.settingsMenu.active = false;
   gui.settingsMenu.dirty = true;
+  gui.shaderSettingsMenu.dirty = true;
   gui.mainMenu.dirty = true;
 }

@@ -1,46 +1,9 @@
 #include "game_state.h"
-#include "guis/main_menu.h"
-#include "guis/settings_menu.h"
-#include "raylib.h"
-#include "raymath.h"
+#include "main_menu.h"
+#include "settings_menu.h"
+#include "shader_settings_menu.h"
 #include "utils.h"
 #include "utils_client.h"
-
-#define RAYGUI_IMPLEMENTATION
-#define RAYGUI_SUPPORT_ICONS
-#include "raygui.h"
-
-#define RRES_IMPLEMENTATION
-#include "rres.h"
-
-#define RRES_RAYLIB_IMPLEMENTATION
-#include "rres-raylib.h"
-
-#define RINI_IMPLEMENTATION
-#include "rini.h"
-
-#define GLSL_VERSION 120
-#define SHADOWMAP_RESOLUTION 1024
-
-void UpdateSettings(GameState& state) { //TODO: Where should I put this? Also make ray impl files to solve include problems
-  // Update UI Style
-  if(state.renderResources.gui->loaded_style != state.settings.uiStyle) {
-    if (strcmp(state.renderResources.gui->styles[state.settings.uiStyle], "default") == 0) GuiLoadStyleDefault();
-    else {
-        int idStyle = rresGetResourceId(*state.renderResources.dir, state.renderResources.gui->styles[state.settings.uiStyle]);
-        rresResourceChunk chunkStyle = rresLoadResourceChunk("resources.rres", idStyle);
-        if(UnpackResourceChunk(&chunkStyle) == RRES_SUCCESS) {
-            GuiLoadStyleFromMemory((const unsigned char*) chunkStyle.data.raw, chunkStyle.info.baseSize);
-        }
-        rresUnloadResourceChunk(chunkStyle);
-    }
-    state.renderResources.gui->loaded_style = state.settings.uiStyle;
-  }
-
-  // Update target fps
-  SetTargetFPS(state.settings.fpsLimit);
-}
-
 
 void init(GameState& state) {
   SetConfigFlags(FLAG_MSAA_4X_HINT);
@@ -85,8 +48,12 @@ void init(GameState& state) {
       Shaders& shaders = state.reloadArena.create<Shaders>();
       state.renderResources.shaders = &shaders;
 
-      int shadowVsId = rresGetResourceId(dir, "shadowmap.vs");
-      int shadowFsId = rresGetResourceId(dir, "shadowmap.fs");
+      char vsFilename[256], fsFilename[256];
+      int glslVersion = rlGetVersion();
+      snprintf(vsFilename, sizeof(vsFilename), "shadowmap_%d.vs", (glslVersion >= 3) ? 330 : 120);
+      snprintf(fsFilename, sizeof(fsFilename), "shadowmap_%d.fs", (glslVersion >= 3) ? 330 : 120);
+      int shadowVsId = rresGetResourceId(dir, vsFilename);
+      int shadowFsId = rresGetResourceId(dir, fsFilename);
       rresResourceChunk shadowVsChunk = rresLoadResourceChunk("resources.rres", shadowVsId);
       rresResourceChunk shadowFsChunk = rresLoadResourceChunk("resources.rres", shadowFsId);
       char* vsCode = cleanShaderCode(shadowVsChunk);
@@ -110,22 +77,14 @@ void init(GameState& state) {
       SetShaderValue(shaders.shadowShader,
                      shaders.lightDirLoc,
                      &shaders.lightDir, SHADER_UNIFORM_VEC3);
-      SetShaderValue(shaders.shadowShader, lightColLoc,
-                     &lightColorNormalized, SHADER_UNIFORM_VEC4);
-      int ambientLoc =
-          GetShaderLocation(shaders.shadowShader, "ambient");
+      SetShaderValue(shaders.shadowShader, lightColLoc, &lightColorNormalized, SHADER_UNIFORM_VEC4);
+      int ambientLoc = GetShaderLocation(shaders.shadowShader, "ambient");
       float ambient[4] = {0.1f, 0.1f, 0.1f, 1.0f};
-      SetShaderValue(shaders.shadowShader, ambientLoc, ambient,
-                     SHADER_UNIFORM_VEC4);
-      shaders.lightVPLoc =
-          GetShaderLocation(shaders.shadowShader, "lightVP");
-      shaders.shadowMapLoc =
-          GetShaderLocation(shaders.shadowShader, "shadowMap");
-      int shadowMapResolution = SHADOWMAP_RESOLUTION;
-      SetShaderValue(shaders.shadowShader,
-                     GetShaderLocation(shaders.shadowShader,
-                                       "shadowMapResolution"),
-                     &shadowMapResolution, SHADER_UNIFORM_INT);
+      SetShaderValue(shaders.shadowShader, ambientLoc, ambient, SHADER_UNIFORM_VEC4);
+      shaders.lightVPLoc = GetShaderLocation(shaders.shadowShader, "lightVP");
+      shaders.shadowMapLoc = GetShaderLocation(shaders.shadowShader, "shadowMap");
+      shaders.shadowMapResolutionLoc = GetShaderLocation(shaders.shadowShader, "shadowMapResolution");
+      SetShaderValue(shaders.shadowShader, shaders.shadowMapResolutionLoc, &shaders.shadowMapResolution, SHADER_UNIFORM_INT);
 
       for (int i = 0; i < resourceManager.roverAssets.body->materialCount; i++) {
         resourceManager.roverAssets.body->materials[i].shader =
@@ -138,17 +97,38 @@ void init(GameState& state) {
       }
 
       shaders.shadowMap.id = rlLoadFramebuffer(); // Load an empty framebuffer
-      shaders.shadowMap.texture.width = SHADOWMAP_RESOLUTION;
-      shaders.shadowMap.texture.height = SHADOWMAP_RESOLUTION;
+      shaders.shadowMap.texture.width = shaders.shadowMapResolution;
+      shaders.shadowMap.texture.height = shaders.shadowMapResolution;
+
+      // Get locations for all customizable parameters
+      shaders.selfShadowIntensityLoc = GetShaderLocation(shaders.shadowShader, "SELF_SHADOW_INTENSITY");
+      shaders.specularPowerLoc = GetShaderLocation(shaders.shadowShader, "SPECULAR_POWER");
+      shaders.poissonDiskScaleLoc = GetShaderLocation(shaders.shadowShader, "POISSON_DISK_SCALE");
+      shaders.shadowBiasFactorLoc = GetShaderLocation(shaders.shadowShader, "SHADOW_BIAS_FACTOR");
+      shaders.shadowBiasMinLoc = GetShaderLocation(shaders.shadowShader, "SHADOW_BIAS_MIN");
+      shaders.poissonSamplesLoc = GetShaderLocation(shaders.shadowShader, "POISSON_SAMPLES");
+      shaders.shadowDarknessLoc = GetShaderLocation(shaders.shadowShader, "SHADOW_DARKNESS");
+      shaders.ambientDivisionLoc = GetShaderLocation(shaders.shadowShader, "AMBIENT_DIVISION");
+      shaders.gammaLoc = GetShaderLocation(shaders.shadowShader, "GAMMA");
+
+      SetShaderValue(shaders.shadowShader, shaders.selfShadowIntensityLoc, &shaders.selfShadowIntensity, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.specularPowerLoc, &shaders.specularPower, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.poissonDiskScaleLoc, &shaders.poissonDiskScale, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.shadowBiasFactorLoc, &shaders.shadowBiasFactor, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.shadowBiasMinLoc, &shaders.shadowBiasMin, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.poissonSamplesLoc, &shaders.poissonSamples, SHADER_UNIFORM_INT);
+      SetShaderValue(shaders.shadowShader, shaders.shadowDarknessLoc, &shaders.shadowDarkness, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.ambientDivisionLoc, &shaders.ambientDivision, SHADER_UNIFORM_FLOAT);
+      SetShaderValue(shaders.shadowShader, shaders.gammaLoc, &shaders.gamma, SHADER_UNIFORM_FLOAT);
 
       if (shaders.shadowMap.id > 0) {
         rlEnableFramebuffer(shaders.shadowMap.id);
 
         // Create depth texture
         // We don't need a color texture for the shadowmap
-        shaders.shadowMap.depth.id = rlLoadTextureDepth(SHADOWMAP_RESOLUTION, SHADOWMAP_RESOLUTION, false);
-        shaders.shadowMap.depth.width = SHADOWMAP_RESOLUTION;
-        shaders.shadowMap.depth.height = SHADOWMAP_RESOLUTION;
+        shaders.shadowMap.depth.id = rlLoadTextureDepth(shaders.shadowMapResolution, shaders.shadowMapResolution, false);
+        shaders.shadowMap.depth.width = shaders.shadowMapResolution;
+        shaders.shadowMap.depth.height = shaders.shadowMapResolution;
         shaders.shadowMap.depth.format = 19; // DEPTH_COMPONENT_24BIT?
         shaders.shadowMap.depth.mipmaps = 1;
 
@@ -169,7 +149,7 @@ void init(GameState& state) {
       int idIcons = rresGetResourceId(dir, "icons.rgi");
       rresResourceChunk chunkIcons =
           rresLoadResourceChunk("resources.rres", idIcons);
-      GuiLoadIconsFromMemory(static_cast<const unsigned char*>(chunkIcons.data.raw),
+      LoadGuiIcons(static_cast<const unsigned char*>(chunkIcons.data.raw),
                        chunkIcons.info.baseSize, "icons");
       rresUnloadResourceChunk(chunkIcons);
 
@@ -195,6 +175,10 @@ void init(GameState& state) {
 
         GUI& gui = state.permanentArena.create<GUI>();
         gui.settingsMenu.anchor01 = {
+          static_cast<float>(GetScreenWidth()) / 2.0f,
+          static_cast<float>(GetScreenHeight()) / 2.0f
+        };
+        gui.shaderSettingsMenu.anchor01 = {
           static_cast<float>(GetScreenWidth()) / 2.0f,
           static_cast<float>(GetScreenHeight()) / 2.0f
         };
@@ -262,6 +246,7 @@ void render(GameState& state) {
 
       DrawMainMenu(*state.renderResources.gui);
       DrawSettingsMenu(state);
+      DrawShaderSettingsMenu(state);
       EndDrawing();
     } break;
     case GameMode::REALTIME: {
@@ -316,7 +301,9 @@ void update(GameState& state) {
                      shaders.lightDirLoc,
                      &shaders.lightDir, SHADER_UNIFORM_VEC3);
 
-      UpdateSettingsMenu(state.renderResources.gui->settingsMenu, state.settings);
+      UpdateShaderSettings(state);
+      UpdateDraggableWindow(state.renderResources.gui->shaderSettingsMenu, state.settings.uiScale);
+      UpdateDraggableWindow(state.renderResources.gui->settingsMenu, state.settings.uiScale);
       UpdateMainMenu(state.renderResources.gui->mainMenu, state.settings);
     } break;
     case GameMode::REALTIME: {
