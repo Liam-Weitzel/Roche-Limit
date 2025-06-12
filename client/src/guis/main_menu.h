@@ -3,7 +3,7 @@
 #include "game_state.h"
 
 void UpdateMainMenu(MainMenu& state, Settings& s);
-void DrawMainMenu(GUI& state);
+void DrawMainMenu(GameState& state);
 void RealtimeButton();                // Button: realtimeButton logic
 void ArenaButton();                // Button: arenaButton logic
 void SandboxButton();                // Button: sandboxButton logic
@@ -25,4 +25,4 @@ void PartyKickButton3();                // Button: partyKickButton3 logic
 void PartyKickButton4();                // Button: partyKickButton4 logic
 void PartyLeaveButton();                // Button: partyLeaveButton logic
 void PartyInviteButton();                // Button: partyInviteButton logic
-void ExitButton();                      // Button: exitButton logic
+void ExitButton(GameState& state);                      // Button: exitButton logic

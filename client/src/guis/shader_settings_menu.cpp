@@ -28,6 +28,22 @@ void UpdateShaderSettings(GameState& state) {
   SetShaderValue(shaders.shadowShader, shaders.gammaLoc, &shaders.gamma, SHADER_UNIFORM_FLOAT);
 }
 
+void InitShaderSettings(GameState& state) {
+  Vector2 anchor = {
+    static_cast<float>(GetScreenWidth()) / 2.0f,
+    static_cast<float>(GetScreenHeight()) / 2.0f
+  };
+  state.renderResources.gui->shaderSettingsMenu.anchor01 = anchor;
+  // state.renderResources.gui->shaderSettingsMenu.gammaSliderValue = state.renderResources.shaders->gamma;
+  // state.renderResources.gui->shaderSettingsMenu.specularPowerSliderValue = state.renderResources.shaders->specularPower;
+  // state.renderResources.gui->shaderSettingsMenu.poissonSamplesSliderValue = state.renderResources.shaders->poissonSamples;
+  // state.renderResources.gui->shaderSettingsMenu.shadowDarknessSliderValue = state.renderResources.shaders->shadowDarkness;
+  // state.renderResources.gui->shaderSettingsMenu.ambientDivisionSliderValue = state.renderResources.shaders->ambientDivision;
+  // state.renderResources.gui->shaderSettingsMenu.shadowBiasMinSliderValue = state.renderResources.shaders->shadowBiasMin;
+  // state.renderResources.gui->shaderSettingsMenu.shadowBiasFactorSliderValue = state.renderResources.shaders->shadowBiasFactor;
+  // state.renderResources.gui->shaderSettingsMenu.selfShadowIntensitySliderValue = state.renderResources.shaders->selfShadowIntensity;
+}
+
 void DrawShaderSettingsMenu(GameState& state) {
   ShaderSettingsMenu& ssm = state.renderResources.gui->shaderSettingsMenu;
   if(!ssm.active) return;

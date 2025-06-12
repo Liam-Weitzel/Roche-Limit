@@ -92,6 +92,16 @@ struct SettingsMenu : DraggableWindow {
     char Line2Text[32];
     char cancelButtonText[32];
     char applyButtonText[32];
+    char MSAACheckboxText[32];
+    char HDPICheckboxText[32];
+    char VSYNCCheckboxText[32];
+    char AlwaysRunCheckboxText[32];
+    char InterlacedCheckboxText[32];
+    char PlaceHolder1CheckboxText[32];
+    char PlaceHolder2CheckboxText[32];
+    char PlaceHolder3CheckboxText[32];
+    char PlaceHolder4CheckboxText[32];
+    char PlaceHolder5CheckboxText[32];
 
     bool uiStyleSpinnerEditMode = false;
     int uiStyleSpinnerValue = 0;
@@ -102,27 +112,47 @@ struct SettingsMenu : DraggableWindow {
     float uiScaleSliderValue = 50.0f;
     bool displayDropdownBoxEditMode = false;
     int displayDropdownBoxActive = 0;
+    bool MSAACheckboxValue = true;
+    bool HDPICheckboxValue = true;
+    bool VSYNCCheckboxValue = true;
+    bool AlwaysRunCheckboxValue = true;
+    bool InterlacedCheckboxValue = false;
+    bool PlaceHolder1CheckboxValue = false;
+    bool PlaceHolder2CheckboxValue = false;
+    bool PlaceHolder3CheckboxValue = false;
+    bool PlaceHolder4CheckboxValue = false;
+    bool PlaceHolder5CheckboxValue = false;
 
-    Rectangle recs[12];
-    Rectangle layout[12] = {
-        {-96, -124, 192, 248},  // GroupBox: settingsGroupBox
-        {-24, 28, 80, 24},      // Spinner: uiStyleSpinner
-        {-24, -92, 112, 16},    // SliderBar: musicSliderBar
-        {-24, -68, 112, 16},    // SliderBar: sfxSliderBar
-        {-24, -4, 72, 24},      // ValueBox: fpsValueBox
-        {-96, -52, 192, 16},    // Line: Line
-        {-24, 60, 112, 16},     // Slider: uiScaleSlider
-        {-24, -36, 96, 24},     // DropdownBox: screenDropdownBox
-        {-72, -36, 56, 24},     // Label: screenLabel
-        {-96, 76, 192, 16},     // Line: Line2
-        {-88, 92, 80, 24},      // Button: cancelButton
-        {8, 92, 80, 24}         // Button: applyButton
+    Rectangle recs[22];
+    Rectangle layout[22] = {
+      {-96, -210, 192, 420},      // GroupBox: settingsGroupBox
+      {-24, -58, 80, 24},         // Spinner: uiStyleSpinner
+      {-24, -178, 112, 16},       // SliderBar: musicSliderBar
+      {-24, -154, 112, 16},       // SliderBar: sfxSliderBar
+      {-24, -90, 72, 24},         // ValueBox: fpsValueBox
+      {-96, -138, 192, 16},       // Line: Line
+      {-24, -26, 112, 16},        // Slider: uiScaleSlider
+      {-24, -122, 96, 24},        // DropdownBox: screenDropdownBox
+      {-72, -122, 56, 24},        // Label: screenLabel
+      {-96, 166, 192, 16},        // Line: Line2
+      {-88, 182, 80, 24},         // Button: cancelButton
+      {8, 182, 80, 24},           // Button: applyButton
+      {0, 6, 24, 24},             // Checkbox: MSAA
+      {0, 38, 24, 24},            // Checkbox: HDPI
+      {0, 70, 24, 24},            // Checkbox: VSYNC
+      {0, 102, 24, 24},           // Checkbox: AlwaysRun
+      {0, 134, 24, 24},           // Checkbox: Interlaced
+      {-88, 6, 24, 24},           // Checkbox: Placeholder
+      {-88, 38, 24, 24},          // Checkbox: Placeholder
+      {-88, 70, 24, 24},          // Checkbox: Placeholder
+      {-88, 102, 24, 24},         // Checkbox: Placeholder
+      {-88, 134, 24, 24}          // Checkbox: Placeholder
     };
 
     SettingsMenu() {
         layoutRecs = recs;
         baseLayout = layout;
-        numRecs = 12;
+        numRecs = 22;
         active = false;
 
         strncpy(settingsWindowBoxText, "Settings", sizeof(settingsWindowBoxText)-1);
@@ -137,6 +167,16 @@ struct SettingsMenu : DraggableWindow {
         strncpy(Line2Text, "", sizeof(Line2Text)-1);
         strncpy(cancelButtonText, "Cancel", sizeof(cancelButtonText)-1);
         strncpy(applyButtonText, "Apply", sizeof(applyButtonText)-1);
+        strncpy(MSAACheckboxText, "MSAA", sizeof(MSAACheckboxText)-1);
+        strncpy(HDPICheckboxText, "HDPI", sizeof(HDPICheckboxText)-1);
+        strncpy(VSYNCCheckboxText, "VSYNC", sizeof(VSYNCCheckboxText)-1);
+        strncpy(AlwaysRunCheckboxText, "Always run", sizeof(AlwaysRunCheckboxText)-1);
+        strncpy(InterlacedCheckboxText, "Interlaced", sizeof(InterlacedCheckboxText)-1);
+        strncpy(PlaceHolder1CheckboxText, "TBD", sizeof(PlaceHolder1CheckboxText)-1);
+        strncpy(PlaceHolder2CheckboxText, "TBD", sizeof(PlaceHolder2CheckboxText)-1);
+        strncpy(PlaceHolder3CheckboxText, "TBD", sizeof(PlaceHolder3CheckboxText)-1);
+        strncpy(PlaceHolder4CheckboxText, "TBD", sizeof(PlaceHolder4CheckboxText)-1);
+        strncpy(PlaceHolder5CheckboxText, "TBD", sizeof(PlaceHolder5CheckboxText)-1);
     }
 };
 
@@ -198,10 +238,39 @@ struct ShaderSettingsMenu : DraggableWindow {
     }
 };
 
+struct ExitConfirmationWindow : DraggableWindow {
+    char shaderSettingsBoxText[32];
+    char ExitConfirmationWindowText[32];
+    char YesButtonText[32];
+    char NoButtonText[32];
+    char AreYouSureLabelText[32];
+
+    Rectangle recs[4];
+    Rectangle layout[4] = {
+      {-64, -40, 128, 96},
+      {-56, 16, 56, 32},
+      {0, 16, 56, 32},
+      {-40, -16, 88, 32}
+    };
+
+    ExitConfirmationWindow() {
+        layoutRecs = recs;
+        baseLayout = layout;
+        numRecs = 4;
+        active = false;
+
+        strncpy(ExitConfirmationWindowText, "Exit Game", sizeof(ExitConfirmationWindowText)-1);
+        strncpy(YesButtonText, "YES", sizeof(YesButtonText)-1);
+        strncpy(NoButtonText, "NO", sizeof(NoButtonText)-1);
+        strncpy(AreYouSureLabelText, "Are you sure?", sizeof(AreYouSureLabelText)-1);
+    }
+};
+
 struct GUI { // Permanent
   MainMenu mainMenu;
   SettingsMenu settingsMenu;
   ShaderSettingsMenu shaderSettingsMenu;
+  ExitConfirmationWindow exitConfirmationWindow;
   char styles[12][32];
   int loaded_style = 0;
 
@@ -330,6 +399,11 @@ struct Settings { // Permanent
   int fpsLimit = 120;
   int uiStyle = 0;
   float uiScale = 50.0f;
+  bool msaa = true;
+  bool hdpi = true;
+  bool vsync = true;
+  bool alwaysRun = true;
+  bool interlaced = false;
 };
 
 struct GameState {
@@ -337,6 +411,7 @@ struct GameState {
   float deltaTime = 0;
   GameMode gameMode = GameMode::MENU;
   Settings settings{};
+  bool exitWindow = false;
 
   // Direct pointers to static arena-managed resources
   RenderResources renderResources;

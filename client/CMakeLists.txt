@@ -151,6 +151,7 @@ set(LIB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/guis/main_menu.cpp
     ${CMAKE_SOURCE_DIR}/src/guis/settings_menu.cpp
     ${CMAKE_SOURCE_DIR}/src/guis/shader_settings_menu.cpp
+    ${CMAKE_SOURCE_DIR}/src/guis/exit_confirmation_window.cpp
 )
 
 # Define include directories

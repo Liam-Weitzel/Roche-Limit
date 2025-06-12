@@ -4,6 +4,25 @@
 #include <cmath>
 
 void UpdateSettings(GameState& state) {
+  switch (state.settings.displayMode) {
+    case 0: // windowed
+      ClearWindowState(FLAG_FULLSCREEN_MODE | FLAG_BORDERLESS_WINDOWED_MODE | FLAG_WINDOW_MAXIMIZED);
+      SetWindowState(FLAG_WINDOW_RESIZABLE);
+      SetWindowSize(1280, 720);
+      break;
+
+    case 1: // borderless
+      ClearWindowState(FLAG_FULLSCREEN_MODE | FLAG_WINDOW_RESIZABLE);
+      SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
+      break;
+
+    case 2: // fullscreen
+      ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE | FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_MAXIMIZED);
+      SetWindowSize(GetMonitorWidth(GetCurrentMonitor()), GetMonitorHeight(GetCurrentMonitor()));
+      SetWindowState(FLAG_FULLSCREEN_MODE);
+      break;
+  }
+
   // Update UI Style
   if(state.renderResources.gui->loaded_style != state.settings.uiStyle) {
     if (strcmp(state.renderResources.gui->styles[state.settings.uiStyle], "default") == 0) GuiLoadStyleDefault();
@@ -20,6 +39,25 @@ void UpdateSettings(GameState& state) {
 
   // Update target fps
   SetTargetFPS(state.settings.fpsLimit);
+}
+
+void InitSettings(GameState& state) {
+  Vector2 anchor = {
+    static_cast<float>(GetScreenWidth()) / 2.0f,
+    static_cast<float>(GetScreenHeight()) / 2.0f
+  };
+  state.renderResources.gui->settingsMenu.anchor01 = anchor;
+  state.renderResources.gui->settingsMenu.sfxSliderBarValue = state.settings.sfxVolume;
+  state.renderResources.gui->settingsMenu.musicSliderBarValue = state.settings.musicVolume;
+  state.renderResources.gui->settingsMenu.displayDropdownBoxActive = state.settings.displayMode;
+  state.renderResources.gui->settingsMenu.fpsValueBoxValue = state.settings.fpsLimit;
+  state.renderResources.gui->settingsMenu.uiStyleSpinnerValue = state.settings.uiStyle;
+  state.renderResources.gui->settingsMenu.uiScaleSliderValue = state.settings.uiScale;
+  state.renderResources.gui->settingsMenu.HDPICheckboxValue = state.settings.hdpi;
+  state.renderResources.gui->settingsMenu.MSAACheckboxValue = state.settings.msaa;
+  state.renderResources.gui->settingsMenu.VSYNCCheckboxValue = state.settings.vsync;
+  state.renderResources.gui->settingsMenu.AlwaysRunCheckboxValue = state.settings.alwaysRun;
+  state.renderResources.gui->settingsMenu.InterlacedCheckboxValue = state.settings.interlaced;
 }
 
 void DrawSettingsMenu(GameState& state) {
@@ -43,6 +81,16 @@ void DrawSettingsMenu(GameState& state) {
   GuiLine(sm.layoutRecs[9], sm.Line2Text);
   if (GuiButton(sm.layoutRecs[10], sm.cancelButtonText)) CancelButton(gui, s); 
   if (GuiButton(sm.layoutRecs[11], sm.applyButtonText)) ApplyButton(state); 
+  GuiCheckBox(sm.layoutRecs[12], sm.MSAACheckboxText, &sm.MSAACheckboxValue);
+  GuiCheckBox(sm.layoutRecs[13], sm.HDPICheckboxText, &sm.HDPICheckboxValue);
+  GuiCheckBox(sm.layoutRecs[14], sm.VSYNCCheckboxText, &sm.VSYNCCheckboxValue);
+  GuiCheckBox(sm.layoutRecs[15], sm.AlwaysRunCheckboxText, &sm.AlwaysRunCheckboxValue);
+  GuiCheckBox(sm.layoutRecs[16], sm.InterlacedCheckboxText, &sm.InterlacedCheckboxValue);
+  GuiCheckBox(sm.layoutRecs[17], sm.PlaceHolder1CheckboxText, &sm.PlaceHolder1CheckboxValue);
+  GuiCheckBox(sm.layoutRecs[18], sm.PlaceHolder2CheckboxText, &sm.PlaceHolder2CheckboxValue);
+  GuiCheckBox(sm.layoutRecs[19], sm.PlaceHolder3CheckboxText, &sm.PlaceHolder3CheckboxValue);
+  GuiCheckBox(sm.layoutRecs[20], sm.PlaceHolder4CheckboxText, &sm.PlaceHolder4CheckboxValue);
+  GuiCheckBox(sm.layoutRecs[21], sm.PlaceHolder5CheckboxText, &sm.PlaceHolder5CheckboxValue);
 
   GuiUnlock();
 }
@@ -73,6 +121,11 @@ void ApplyButton(GameState& state) {
   s.displayMode = gui.settingsMenu.displayDropdownBoxActive;
   s.sfxVolume = gui.settingsMenu.sfxSliderBarValue;
   s.musicVolume = gui.settingsMenu.musicSliderBarValue;
+  s.msaa = gui.settingsMenu.MSAACheckboxValue;
+  s.hdpi = gui.settingsMenu.HDPICheckboxValue;
+  s.vsync = gui.settingsMenu.VSYNCCheckboxValue;
+  s.alwaysRun = gui.settingsMenu.AlwaysRunCheckboxValue;
+  s.interlaced = gui.settingsMenu.InterlacedCheckboxValue;
 
   rini_config config = rini_load_config(NULL);
 
@@ -89,6 +142,11 @@ void ApplyButton(GameState& state) {
   rini_set_config_value(&config, "FPS_LIMIT", s.fpsLimit, "The fps that the game should not exceed");
   rini_set_config_value(&config, "UI_STYLE", s.uiStyle, "UI visual style selected");
   rini_set_config_value(&config, "UI_SCALE", s.uiScale, "UI scale multiplier");
+  rini_set_config_value(&config, "MSAA", s.msaa, "Pass FLAG_MSAA_4X_HINT as window startup config flag");
+  rini_set_config_value(&config, "HDPI", s.hdpi, "Pass FLAG_WINDOW_HIGHDPI as window startup config flag");
+  rini_set_config_value(&config, "VSYNC", s.vsync, "Pass FLAG_VSYNC_HINT as window startup config flag");
+  rini_set_config_value(&config, "ALWAYS_RUN", s.alwaysRun, "Pass FLAG_WINDOW_ALWAYS_RUN as window startup config flag");
+  rini_set_config_value(&config, "INTERLACED", s.interlaced, "Pass FLAG_INTERLACED_HINT as startup config flag");
 
   rini_save_config(config, "settings.ini");
 
@@ -96,7 +154,7 @@ void ApplyButton(GameState& state) {
 
   UpdateSettings(state);
 
-  gui.settingsMenu.dirty = true;
-  gui.shaderSettingsMenu.dirty = true;
-  gui.mainMenu.dirty = true;
+  state.renderResources.gui->settingsMenu.dirty = true;
+  state.renderResources.gui->shaderSettingsMenu.dirty = true;
+  state.renderResources.gui->mainMenu.dirty = true;
 }

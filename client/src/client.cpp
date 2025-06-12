@@ -1,22 +1,38 @@
 #include "game_state.h"
 #include "main_menu.h"
+#include "ray.h"
 #include "settings_menu.h"
 #include "shader_settings_menu.h"
+#include "exit_confirmation_window.h"
 #include "utils.h"
 #include "utils_client.h"
+#include <raylib.h>
 
 void init(GameState& state) {
-  SetConfigFlags(FLAG_MSAA_4X_HINT);
-  SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-  SetConfigFlags(FLAG_WINDOW_HIGHDPI);
-  // SetConfigFlags(FLAG_WINDOW_TOPMOST | FLAG_WINDOW_UNDECORATED);
-
   rini_config config = rini_load_config("settings.ini");
-  // TODO: Parse out settings and load back into state if not hot code reload
 
-  InitWindow(800, 450, "Roche Limit");
-  // ToggleFullscreen();
-  SetTargetFPS(120);
+  state.settings.fpsLimit = rini_get_config_value(config, "FPS_LIMIT");
+  state.settings.uiStyle = rini_get_config_value(config, "UI_STYLE");
+  state.settings.uiScale = (float)rini_get_config_value(config, "UI_SCALE");
+  state.settings.displayMode = rini_get_config_value(config, "DISPLAY_MODE");
+  state.settings.sfxVolume = (float)rini_get_config_value(config, "SFX_VOLUME");
+  state.settings.musicVolume = (float)rini_get_config_value(config, "MUSIC_VOLUME");
+  state.settings.msaa = rini_get_config_value(config, "MSAA");
+  state.settings.hdpi = rini_get_config_value(config, "HDPI");
+  state.settings.vsync = rini_get_config_value(config, "VSYNC");
+  state.settings.alwaysRun = rini_get_config_value(config, "ALWAYS_RUN");
+  state.settings.interlaced = rini_get_config_value(config, "INTERLACED");
+
+  unsigned int flags = 0;
+  if (state.settings.msaa) flags |= FLAG_MSAA_4X_HINT;
+  if (state.settings.hdpi) flags |= FLAG_WINDOW_HIGHDPI;
+  if (state.settings.vsync) flags |= FLAG_VSYNC_HINT;
+  if (state.settings.alwaysRun) flags |= FLAG_WINDOW_ALWAYS_RUN;
+  if (state.settings.interlaced) flags |= FLAG_INTERLACED_HINT;
+  SetConfigFlags(flags);
+
+  InitWindow(1280, 720, "Roche Limit");
+  SetExitKey(KEY_NULL);
 
   // FIX: find a better way to find out if we are hot code reloading
   bool isReload = state.permanentArena.size() > 1700; // is our current load a hot code reload?
@@ -184,13 +200,16 @@ void init(GameState& state) {
         };
         state.renderResources.gui = &gui;
       }
+      InitSettings(state);
+      InitShaderSettings(state);
+      InitExitConfirmationWindow(state);
+      UpdateSettings(state);
     } break;
     case GameMode::REALTIME: {
     } break;
     case GameMode::AUTOBATTLE: {
     } break;
   }
-
 }
 
 void render(GameState& state) {
@@ -244,9 +263,10 @@ void render(GameState& state) {
       DrawText("Use the arrow keys to move the light", 10, 40, 20,
                GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 
-      DrawMainMenu(*state.renderResources.gui);
+      DrawMainMenu(state);
       DrawSettingsMenu(state);
       DrawShaderSettingsMenu(state);
+      DrawExitConfirmationWindow(state);
       EndDrawing();
     } break;
     case GameMode::REALTIME: {
@@ -301,8 +321,11 @@ void update(GameState& state) {
                      shaders.lightDirLoc,
                      &shaders.lightDir, SHADER_UNIFORM_VEC3);
 
+      if (WindowShouldClose()) state.renderResources.gui->exitConfirmationWindow.active = true;
+      if (IsKeyPressed(KEY_ESCAPE)) state.renderResources.gui->settingsMenu.active = true;
       UpdateShaderSettings(state);
       UpdateDraggableWindow(state.renderResources.gui->shaderSettingsMenu, state.settings.uiScale);
+      UpdateDraggableWindow(state.renderResources.gui->exitConfirmationWindow, state.settings.uiScale);
       UpdateDraggableWindow(state.renderResources.gui->settingsMenu, state.settings.uiScale);
       UpdateMainMenu(state.renderResources.gui->mainMenu, state.settings);
     } break;
@@ -322,9 +345,8 @@ void reload(GameState& state) {
 EXPORT_FN void client_main(GameState& state) {
   init(state);
   uint64_t last_write_time = get_timestamp("./libclient.so");
-  while (!WindowShouldClose()) {
-    if (last_write_time != get_timestamp("./libclient.so"))
-      break;
+  while (!state.exitWindow) {
+    if (last_write_time != get_timestamp("./libclient.so")) state.exitWindow = true;
     state.frameCount++;
     state.deltaTime = GetFrameTime();
     update(state);

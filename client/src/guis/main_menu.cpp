@@ -2,6 +2,7 @@
 #include "game_state.h"
 #include "utils_client.h"
 #include <cmath>
+#include <raylib.h>
 
 void UpdateMainMenu(MainMenu& m, Settings& s) {
   if(IsWindowResized()) m.dirty = true;
@@ -53,13 +54,14 @@ void UpdateMainMenu(MainMenu& m, Settings& s) {
   }
 }
 
-void DrawMainMenu(GUI& state) {
-  MainMenu& m = state.mainMenu;
+void DrawMainMenu(GameState& state) {
+  MainMenu& m = state.renderResources.gui->mainMenu;
+  SettingsMenu& sm = state.renderResources.gui->settingsMenu;
   if (GuiButton(m.layoutRecs[0], m.realtimeButtonText)) RealtimeButton(); 
   if (GuiButton(m.layoutRecs[1], m.arenaButtonText)) ArenaButton(); 
   if (GuiButton(m.layoutRecs[2], m.sandboxButtonText)) SandboxButton(); 
   if (GuiButton(m.layoutRecs[3], m.customGameButtonText)) CustomGameButton(); 
-  if (GuiButton(m.layoutRecs[4], m.settingsButtonText)) SettingsButton(state.settingsMenu); 
+  if (GuiButton(m.layoutRecs[4], m.settingsButtonText)) SettingsButton(sm); 
   GuiScrollPanel(
     {m.layoutRecs[5].x, m.layoutRecs[5].y, 
      m.layoutRecs[5].width - m.chatScrollWindowBoundsOffset.x, 
@@ -90,7 +92,7 @@ void DrawMainMenu(GUI& state) {
   if (GuiButton(m.layoutRecs[24], m.partyKickButton4Text)) PartyKickButton4(); 
   if (GuiButton(m.layoutRecs[25], m.partyLeaveButtonText)) PartyLeaveButton(); 
   if (GuiButton(m.layoutRecs[26], m.partyInviteButtonText)) PartyInviteButton(); 
-  if (GuiButton(m.layoutRecs[27], m.exitButtonText)) ExitButton(); 
+  if (GuiButton(m.layoutRecs[27], m.exitButtonText)) ExitButton(state); 
 }
 
 void RealtimeButton() {
@@ -177,6 +179,6 @@ void PartyInviteButton() {
   // TODO: Implement control logic
 }
 
-void ExitButton() {
-  // TODO: Implement control logic
+void ExitButton(GameState& state) {
+  state.renderResources.gui->exitConfirmationWindow.active = true;
 }

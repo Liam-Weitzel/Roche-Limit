@@ -1,0 +1,15 @@
+#
+# rgl layout text file (v4.0) - raygui layout file generated using rGuiLayout
+#
+# Number of controls:     4
+#
+# Ref. window:    r <x> <y> <width> <height>
+# Anchor info:    a <id> <name> <posx> <posy> <enabled>
+# Control info:   c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 40 -1 -1
+a 001 anchor01 560 464 1
+c 000 0 ExitGameWindow -64 -40 128 96 1 Exit Game
+c 001 5 Button001 -56 16 56 32 1 YES
+c 002 5 Button002 0 16 56 32 1 NO
+c 003 6 LabelButton003 -40 -16 88 32 1 Are you sure?
