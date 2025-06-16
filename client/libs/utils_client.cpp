@@ -388,27 +388,3 @@ bool CompareTexture(const Texture &a, const Texture &b) {
   return a.id == b.id && a.width == b.width && a.height == b.height &&
          a.format == b.format && a.mipmaps == b.mipmaps;
 }
-
-// NOTE: UI stuff
-UIScale CalculateUIScale(float uiScalePercent) {
-    UIScale scale;
-    float width = GetScreenWidth();
-    float height = GetScreenHeight();
-    
-    scale.scaleX = width / scale.baseWidth;
-    scale.scaleY = height / scale.baseHeight;
-
-    // Use the smaller scale to maintain proportions
-    scale.uniformScale = (scale.scaleX < scale.scaleY) ? scale.scaleX : scale.scaleY;
-
-    // Apply user's preference to the final scale
-    // Normalize from [0, 100] to [0.25, 4.0]
-    float normalizedUIScale = 0.25f + (uiScalePercent / 100.0f) * (2.0f - 0.5f);
-    scale.uniformScale *= normalizedUIScale;
-
-    return scale;
-}
-
-float ScaleSize(float baseSize, float scaleFactor) {
-    return roundf(baseSize * scaleFactor);
-}

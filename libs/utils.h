@@ -141,33 +141,33 @@
 // NOTE: Load, unload and get symbols from dynamic lib
 template<typename T>
 struct DynamicLib {
-    LIB_HANDLE handle = nullptr;
-    T* symbols = nullptr;
+  LIB_HANDLE handle = nullptr;
+  T* symbols = nullptr;
 
-    bool load(const char* path) {
-        handle = LIB_OPEN(path);
-        if (!handle) return false;
-        symbols = new T();
-        return true;
+  bool load(const char* path) {
+    handle = LIB_OPEN(path);
+    if (!handle) return false;
+    symbols = new T();
+    return true;
+  }
+
+  void unload() {
+    if (handle) {
+      LIB_CLOSE(handle);
+      handle = nullptr;
     }
-
-    void unload() {
-        if (handle) {
-            LIB_CLOSE(handle);
-            handle = nullptr;
-        }
-        if (symbols) {
-            delete symbols;
-            symbols = nullptr;
-        }
+    if (symbols) {
+      delete symbols;
+      symbols = nullptr;
     }
+  }
 
-    bool is_loaded() const { return handle != nullptr; }
+  bool is_loaded() const { return handle != nullptr; }
 
-    template<typename F>
-    F get_symbol(const char* name) {
-        return (F)LIB_GET_SYMBOL(handle, name);
-    }
+  template<typename F>
+  F get_symbol(const char* name) {
+    return (F)LIB_GET_SYMBOL(handle, name);
+  }
 };
 
 // NOTE: Logging
@@ -243,27 +243,24 @@ void _log(const char* prefix, const char* msg, TextColor textColor, Args... args
 
 template <typename T>
 struct ArrayIterator {
-    T* ptr;
-    T* end;
+  T* ptr;
+  T* end;
 
-    ArrayIterator(const ArrayIterator&) = delete;
-    ArrayIterator& operator=(const ArrayIterator&) = delete;
-    ArrayIterator(ArrayIterator&& other) = delete;
-    ArrayIterator& operator=(ArrayIterator&& other) = delete;
+  ArrayIterator(const ArrayIterator&) = delete;
+  ArrayIterator& operator=(const ArrayIterator&) = delete;
+  ArrayIterator(ArrayIterator&& other) = delete;
+  ArrayIterator& operator=(ArrayIterator&& other) = delete;
 
-    ArrayIterator(T* start, T* end) 
-        : ptr(start), end(end) {}
+  ArrayIterator(T* start, T* end) : ptr(start), end(end) {}
 
-    ArrayIterator& operator++() {
-        if (ptr != end) {
-            ++ptr;
-        }
-        return *this;
-    }
+  ArrayIterator& operator++() {
+    if (ptr != end) ++ptr;
+    return *this;
+  }
 
-    bool operator!=(const ArrayIterator& other) const { return ptr != other.ptr; }
-    T& operator*() const { return *ptr; }
-    T* operator->() const { return ptr; }
+  bool operator!=(const ArrayIterator& other) const { return ptr != other.ptr; }
+  T& operator*() const { return *ptr; }
+  T* operator->() const { return ptr; }
 };
 
 template<typename T, uint32_t N>
@@ -380,11 +377,11 @@ struct ArrayCT {
   }
 
   bool empty() const {
-      return count == 0;
+    return count == 0;
   }
 
   uint32_t size() const {
-      return count;
+    return count;
   }
 
   uint32_t capacity() const {

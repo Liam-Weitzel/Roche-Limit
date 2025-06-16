@@ -1,28 +1,27 @@
 #include "exit_confirmation_window.h"
-#include "ray.h"
+#include "game_state.h"
 
-void DrawExitConfirmationWindow(GameState& state) {
-  ExitConfirmationWindow& ecw = state.renderResources.gui->exitConfirmationWindow;
-  if (ecw.active) {
-    ecw.active = !GuiWindowBox(ecw.layoutRecs[0], ecw.ExitConfirmationWindowText);
-    if (GuiButton(ecw.layoutRecs[1], ecw.YesButtonText) || IsKeyPressed(KEY_Y) || IsKeyPressed(KEY_ENTER)) Yes(state); 
-    if (GuiButton(ecw.layoutRecs[2], ecw.NoButtonText) || IsKeyPressed(KEY_N)) No(state); 
-    GuiLabelButton(ecw.layoutRecs[3], ecw.AreYouSureLabelText);
+void ExitConfirmationWindow::Draw() {
+  if (active) {
+    active = !GuiWindowBox(layoutRecs[0], ExitConfirmationWindowText);
+    if (GuiButton(layoutRecs[1], YesButtonText) || IsKeyPressed(KEY_Y) || IsKeyPressed(KEY_ENTER)) Yes(); 
+    if (GuiButton(layoutRecs[2], NoButtonText) || IsKeyPressed(KEY_N)) No(); 
+    GuiLabelButton(layoutRecs[3], AreYouSureLabelText);
   }
 }
 
-void InitExitConfirmationWindow(GameState& state) {
-  Vector2 anchor = {
+void ExitConfirmationWindow::Init(GameState& state) {
+  anchor = {
     static_cast<float>(GetScreenWidth()) / 2.0f,
     static_cast<float>(GetScreenHeight()) / 2.0f
   };
-  state.renderResources.gui->exitConfirmationWindow.anchor01 = anchor;
+  exitWindow = &state.exitWindow;
 }
 
-void Yes(GameState& state) {
-  state.exitWindow = true;
+void ExitConfirmationWindow::Yes() {
+  *exitWindow = true;
 }
 
-void No(GameState& state) {
-  state.renderResources.gui->exitConfirmationWindow.active = false;
+void ExitConfirmationWindow::No() {
+  active = false;
 }
