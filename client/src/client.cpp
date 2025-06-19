@@ -180,6 +180,7 @@ void init(GameState& state) {
         GUI& gui = state.permanentArena.create<GUI>();
         state.renderResources.gui = &gui;
       }
+      state.inputHandler.init(state);
       state.renderResources.gui->Init(state);
       state.settings.Init(state);
       state.settings.Update();
@@ -298,8 +299,6 @@ void update(GameState& state) {
                      shaders.lightDirLoc,
                      &shaders.lightDir, SHADER_UNIFORM_VEC3);
 
-      if (WindowShouldClose()) state.renderResources.gui->exitConfirmationWindow.active = true; //TODO: input manager?
-      if (IsKeyPressed(KEY_ESCAPE)) state.renderResources.gui->settingsMenu.active = true; //TODO: input manager?
       if(state.renderResources.gui->shaderSettingsMenu.active) state.renderResources.shaders->upload();
       state.renderResources.gui->Update();
     } break;

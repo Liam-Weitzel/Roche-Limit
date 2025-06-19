@@ -3,6 +3,7 @@
 #include "main_menu.h"
 #include "settings_menu.h"
 #include "shader_settings_menu.h"
+#include "ui_elements.h"
 #include "utils.h"
 #include <cstring>
 
@@ -58,4 +59,9 @@ struct GUI { // Permanent
   void BringToFront(DraggableWindow* window);
   void Update();
   void Draw();
+
+  void Open(DraggableWindow* window);
+  void Close(DraggableWindow* window);
+  void Toggle(DraggableWindow* window);
+  void CloseTopWindowOrOpenSettings();
 };

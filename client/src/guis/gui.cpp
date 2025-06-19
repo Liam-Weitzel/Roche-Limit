@@ -44,6 +44,7 @@ void GUI::Update() {
 
     // Sort windows by z-index before drawing
     // Simple bubble sort since we'll have few windows
+    // TODO: Refactor to use heap instead
     for (uint32_t i = 0; i < draggableWindows.size() - 1; i++) {
       for (uint32_t j = 0; j < draggableWindows.size() - i - 1; j++) {
         if (draggableWindows[j]->zIndex > draggableWindows[j + 1]->zIndex) {
@@ -89,4 +90,35 @@ void GUI::Draw() {
   for (uint32_t i = 0; i < draggableWindows.count; i++) {
     draggableWindows[i]->Draw();
   }
+}
+
+void GUI::Open(DraggableWindow* window) {
+  window->anchor = {
+    static_cast<float>(GetScreenWidth()) / 2.0f,
+    static_cast<float>(GetScreenHeight()) / 2.0f
+  };
+  window->active = true;
+  BringToFront(window);
+}
+
+void GUI::Close(DraggableWindow* window) {
+  window->active = false;
+}
+
+void GUI::Toggle(DraggableWindow* window) {
+  if(!window->active) Open(window);
+  else Close(window);
+}
+
+void GUI::CloseTopWindowOrOpenSettings() {
+  // We know that draggableWindows is already sorted by zIndex because GUI::Update does this every frame
+  DraggableWindow* topMost = nullptr;
+  for (int i = draggableWindows.count - 1; i >= 0; i--) {
+    if(draggableWindows[i]->active) {
+      topMost = draggableWindows[i];
+      break;
+    }
+  }
+  if(topMost != nullptr) Close(topMost);
+  else Open(&settingsMenu);
 }

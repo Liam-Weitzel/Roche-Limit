@@ -2,30 +2,35 @@
 #include "game_state.h"
 #include "settings.h"
 #include "ui_scale.h"
+#include "gui.h"
 
 // Button handlers
-void GameModesGroup::RealtimeButton() { /* TODO: Implement control logic */ }
-void GameModesGroup::ArenaButton() { /* TODO: Implement control logic */ }
-void GameModesGroup::SandboxButton() { /* TODO: Implement control logic */ }
-void GameModesGroup::CustomGameButton() { /* TODO: Implement control logic */ }
-void ChatGroup::SettingsButton() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyUsernameButton4() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyUsernameButton3() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyUsernameButton2() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyUsernameButton1() { /* TODO: Implement control logic */ }
-void PartyGroup::ProfileUsernameButton() { /* TODO: Implement control logic */ }
-void PartyGroup::ProfileIconButton() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyIconButton1() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyIconButton2() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyIconButton3() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyIconButton4() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyKickButton1() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyKickButton2() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyKickButton3() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyKickButton4() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyLeaveButton() { /* TODO: Implement control logic */ }
-void PartyGroup::PartyInviteButton() { /* TODO: Implement control logic */ }
-void ChatGroup::ExitButton() { /* TODO: Implement control logic */ }
+void GameModesGroup::RealtimeButton() {} // TODO: Implement
+void GameModesGroup::ArenaButton() {} // TODO: Implement
+void GameModesGroup::SandboxButton() {} // TODO: Implement
+void GameModesGroup::CustomGameButton() {} // TODO: Implement
+void ChatGroup::SettingsButton() {
+  gui->Toggle(&gui->settingsMenu);
+}
+void PartyGroup::PartyUsernameButton4() {} // TODO: Implement
+void PartyGroup::PartyUsernameButton3() {} // TODO: Implement
+void PartyGroup::PartyUsernameButton2() {} // TODO: Implement
+void PartyGroup::PartyUsernameButton1() {} // TODO: Implement
+void PartyGroup::ProfileUsernameButton() {} // TODO: Implement
+void PartyGroup::ProfileIconButton() {} // TODO: Implement
+void PartyGroup::PartyIconButton1() {} // TODO: Implement
+void PartyGroup::PartyIconButton2() {} // TODO: Implement
+void PartyGroup::PartyIconButton3() {} // TODO: Implement
+void PartyGroup::PartyIconButton4() {} // TODO: Implement
+void PartyGroup::PartyKickButton1() {} // TODO: Implement
+void PartyGroup::PartyKickButton2() {} // TODO: Implement
+void PartyGroup::PartyKickButton3() {} // TODO: Implement
+void PartyGroup::PartyKickButton4() {} // TODO: Implement
+void PartyGroup::PartyLeaveButton() {} // TODO: Implement
+void PartyGroup::PartyInviteButton() {} // TODO: Implement
+void ChatGroup::ExitButton() {
+  gui->Toggle(&gui->exitConfirmationWindow);
+}
 
 void MainMenu::Update() {
   if(IsWindowResized()) {
@@ -116,6 +121,19 @@ void MainMenu::Draw() {
   GuiUnlock();
 }
 
+void GameModesGroup::Init(GameState& state) {} // TODO: Implement
+
+void ChatGroup::Init(GameState& state) {
+  gui = state.renderResources.gui;
+}
+
+void MusicGroup::Init(GameState& state) {} // TODO: Implement
+void PartyGroup::Init(GameState& state) {} // TODO: Implement
+
 void MainMenu::Init(GameState& state) {
   s = &state.settings;
+  gameModes.Init(state);
+  chat.Init(state);
+  music.Init(state);
+  party.Init(state);
 }

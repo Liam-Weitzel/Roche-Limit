@@ -4,6 +4,7 @@
 
 struct GameState;  // Forward declare
 struct Settings; //Forward declare
+struct GUI; // Forward declare
 
 struct PartyGroup : public StaticElementGroup {
   char partyGroupBoxText[32];
@@ -68,6 +69,7 @@ struct PartyGroup : public StaticElementGroup {
     strncpy(partyInviteButtonText, "Invite", sizeof(partyInviteButtonText)-1);
   }
 
+  void Init(GameState& state);
   void Draw();
   void PartyUsernameButton4();
   void PartyUsernameButton3();
@@ -115,6 +117,7 @@ struct MusicGroup : public StaticElementGroup {
     strncpy(albumSpinnerText, "", sizeof(albumSpinnerText)-1);
   }
 
+  void Init(GameState& state);
   void Draw();
 };
 
@@ -134,6 +137,8 @@ struct ChatGroup : public StaticElementGroup {
   Vector2 chatScrollWindowScrollOffset = {0, 0};
   Vector2 chatScrollWindowBoundsOffset = {0, 0};
   
+  GUI* gui;
+
   ChatGroup() {
     layoutRecs = recs;
     baseLayout = layout;
@@ -145,6 +150,7 @@ struct ChatGroup : public StaticElementGroup {
     strncpy(chatScrollWindowText, "", sizeof(chatScrollWindowText)-1);
   }
 
+  void Init(GameState& state);
   void Draw();
   void SettingsButton();
   void ExitButton();
@@ -176,6 +182,7 @@ struct GameModesGroup : public StaticElementGroup {
     strncpy(customGameButtonText, "Custom game", sizeof(customGameButtonText)-1);
   }
 
+  void Init(GameState& state);
   void Draw();
   void RealtimeButton();
   void ArenaButton();

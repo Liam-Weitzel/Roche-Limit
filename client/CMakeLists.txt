@@ -155,6 +155,7 @@ set(LIB_SOURCES
     ${CMAKE_SOURCE_DIR}/src/guis/gui.cpp
     ${CMAKE_SOURCE_DIR}/src/guis/ui_elements.cpp
     ${CMAKE_SOURCE_DIR}/src/settings.cpp
+    ${CMAKE_SOURCE_DIR}/src/input.cpp
 )
 
 # Define include directories

@@ -2,6 +2,9 @@
 #include "ray.h"
 #include <cstdio>
 
+struct GUI; // Forward declare
+struct GameState; // Forward declare
+
 struct KeyDebounce {
   bool canPress = true;
 
@@ -21,9 +24,8 @@ struct KeyDebounce {
 
 enum class Command {
   None,
-  CloseWindow,
-  OpenSettings,
-  OpenShaderSettings,
+  CloseTopWindowOrOpenSettings,
+  ToggleShaderSettings,
 };
 
 struct KeyBinding {
@@ -35,7 +37,7 @@ struct KeyBinding {
   KeyBinding(int k = 0, bool c = false, bool s = false, bool a = false) : key(k), ctrl(c), shift(s), alt(a) {}
 
   bool isPressed() const {
-    return IsKeyPressed(key) && 
+    return IsKeyDown(key) && 
            (!ctrl || IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) &&
            (!shift || IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) &&
            (!alt || IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT));
@@ -51,18 +53,17 @@ struct InputManager {
 
   InputManager() {
     // Default bindings
-    mapCommand(Command::CloseWindow, KeyBinding(KEY_ESCAPE));
-    mapCommand(Command::OpenSettings, KeyBinding(KEY_F1));
-    mapCommand(Command::OpenShaderSettings, KeyBinding(KEY_F2));
+    mapCommand(Command::CloseTopWindowOrOpenSettings, KeyBinding(KEY_ESCAPE));
+    mapCommand(Command::ToggleShaderSettings, KeyBinding(KEY_F1));
   }
-  
+
   void mapCommand(Command cmd, const KeyBinding& binding) {
     if (bindingCount >= MAX_BINDINGS) return;
     bindings[bindingCount] = binding;
     commands[bindingCount] = cmd;
     bindingCount++;
   }
-  
+
   Command getCommand() {
     for (int i = 0; i < bindingCount; i++) {
       if (debounces[i].handle(bindings[i].isPressed())) {
@@ -74,9 +75,8 @@ struct InputManager {
 
   const char* getCommandString(Command cmd) {
     switch(cmd) {
-      case Command::CloseWindow: return "CLOSE_WINDOW";
-      case Command::OpenSettings: return "OPEN_SETTINGS";
-      case Command::OpenShaderSettings: return "OPEN_SHADER_SETTINGS";
+      case Command::CloseTopWindowOrOpenSettings: return "CLOSE_TOP_WINDOW_OR_TOGGLE_SETTINGS";
+      case Command::ToggleShaderSettings: return "TOGGLE_SHADER_SETTINGS";
       case Command::None: return "NONE";
       default: return "UNKNOWN";
     }
@@ -111,21 +111,8 @@ struct InputManager {
 
 struct InputHandler {
   InputManager input;
+  GUI* gui;
 
-  void update() {
-    Command cmd = input.getCommand();
-    switch (cmd) {
-      case Command::CloseWindow:
-        break;
-        
-      case Command::OpenSettings:
-        break;
-        
-      case Command::OpenShaderSettings:
-        break;
-        
-      case Command::None:
-        break;
-    }
-  }
+  void init(GameState& state);
+  void update();
 };
