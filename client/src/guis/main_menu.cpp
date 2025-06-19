@@ -28,7 +28,6 @@ void PartyGroup::PartyInviteButton() { /* TODO: Implement control logic */ }
 void ChatGroup::ExitButton() { /* TODO: Implement control logic */ }
 
 void MainMenu::Update() {
-
   if(IsWindowResized()) {
     gameModes.dirty = true;
     chat.dirty = true;
@@ -109,10 +108,12 @@ void PartyGroup::Draw() {
 }
 
 void MainMenu::Draw() {
+  if (!shouldProcessInput) GuiLock();
   gameModes.Draw();
   chat.Draw();
   music.Draw();
   party.Draw();
+  GuiUnlock();
 }
 
 void MainMenu::Init(GameState& state) {

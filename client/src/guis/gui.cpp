@@ -20,37 +20,73 @@ void GUI::Init(GameState& state) {
 }
 
 void GUI::Update() {
+  bool anyOpen = false;
+  for(DraggableWindow* i : draggableWindows) if(i->active) anyOpen = true;
+
+  if(anyOpen) {
+    bool draggingAnyWindow = false;
+    for (DraggableWindow* i : draggableWindows) {
+      if(i->isDragging) {
+        draggingAnyWindow = true;
+        break;
+      }
+    }
+
+    // Check for clicks and determine which windows should process input
+    Vector2 mousePos = GetMousePosition();
+    bool clickThisFrame = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+
+    // Reset all windows' input processing
+    for (DraggableWindow* i : draggableWindows) {
+      i->shouldProcessInput = false;
+    }
+    mainMenu.shouldProcessInput = false;
+
+    // Sort windows by z-index before drawing
+    // Simple bubble sort since we'll have few windows
+    for (uint32_t i = 0; i < draggableWindows.size() - 1; i++) {
+      for (uint32_t j = 0; j < draggableWindows.size() - i - 1; j++) {
+        if (draggableWindows[j]->zIndex > draggableWindows[j + 1]->zIndex) {
+          DraggableWindow* temp = draggableWindows[j];
+          draggableWindows[j] = draggableWindows[j + 1];
+          draggableWindows[j + 1] = temp;
+        }
+      }
+    }
+
+    // First check if mouse is over any active draggable window
+    bool mouseOverWindow = false;
+    for (int i = draggableWindows.count - 1; i >= 0; i--) {
+      if (!draggableWindows[i]->active) continue;
+
+      bool mouseOverThisWindow = CheckCollisionPointRec(mousePos, draggableWindows[i]->layoutRecs[0]);
+
+      if (mouseOverThisWindow) {
+        if (clickThisFrame) BringToFront(draggableWindows[i]);
+        if (!draggingAnyWindow) draggableWindows[i]->shouldProcessInput = true;
+        mouseOverWindow = true;
+        break;
+      }
+
+      // Main menu can only process input if no window is under the mouse
+      mainMenu.shouldProcessInput = !mouseOverWindow && !draggingAnyWindow;
+    }
+  } else {
+    mainMenu.shouldProcessInput = true;
+  }
+
+  // Update all windows
   mainMenu.Update();
-  for (DraggableWindow* i : draggableWindows) i->Update(*uiScale);
+  for (DraggableWindow* i : draggableWindows) {
+    i->Update(*uiScale);
+  }
 }
 
 void GUI::Draw() {
   mainMenu.Draw();
 
-  // Sort windows by z-index before drawing
-  // Simple bubble sort since we'll have few windows
-  for (uint32_t i = 0; i < draggableWindows.size() - 1; i++) {
-    for (uint32_t j = 0; j < draggableWindows.size() - i - 1; j++) {
-      if (draggableWindows[j]->zIndex > draggableWindows[j + 1]->zIndex) {
-        DraggableWindow* temp = draggableWindows[j];
-        draggableWindows[j] = draggableWindows[j + 1];
-        draggableWindows[j + 1] = temp;
-      }
-    }
-  }
-
-  // Draw windows in z-order
-  for (uint32_t i = 0; i < draggableWindows.size(); i++) {
-    if (draggableWindows[i]->active) {
-      if (draggableWindows[i] == &settingsMenu) {
-        settingsMenu.Draw();
-      }
-      else if (draggableWindows[i] == &shaderSettingsMenu) {
-        shaderSettingsMenu.Draw();
-      }
-      else if (draggableWindows[i] == &exitConfirmationWindow) {
-        exitConfirmationWindow.Draw();
-      }
-    }
+  // Draw draggable windows in z-order
+  for (uint32_t i = 0; i < draggableWindows.count; i++) {
+    draggableWindows[i]->Draw();
   }
 }

@@ -16,10 +16,10 @@ struct ExitConfirmationWindow : DraggableWindow {
 
   Rectangle recs[4];
   Rectangle layout[4] = {
-    {-64, -40, 128, 96},
-    {-56, 16, 56, 32},
-    {0, 16, 56, 32},
-    {-40, -16, 88, 32}
+    {-64, -50, 128, 96},
+    {-56, 06, 56, 32},
+    {0, 06, 56, 32},
+    {-40, -26, 88, 32}
   };
 
   ExitConfirmationWindow() {

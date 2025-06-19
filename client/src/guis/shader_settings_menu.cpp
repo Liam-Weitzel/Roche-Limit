@@ -13,6 +13,8 @@ void ShaderSettingsMenu::Init(GameState& state) {
 void ShaderSettingsMenu::Draw() {
   if(!active) return;
 
+  if (!shouldProcessInput) GuiLock();
+
   active = !GuiWindowBox(layoutRecs[0], shaderSettingsBoxText);
   GuiSliderBar(layoutRecs[1], selfShadowIntensitySliderText, NULL, &shaders->selfShadowIntensity, 0, 2.0f);
   GuiSliderBar(layoutRecs[8], specularPowerSliderText, NULL, &shaders->specularPower, 0, 32.0f);
@@ -24,6 +26,8 @@ void ShaderSettingsMenu::Draw() {
   GuiSliderBar(layoutRecs[7], ambientDivisionSliderText, NULL, &shaders->ambientDivision, 0, 40.0f);
   GuiSliderBar(layoutRecs[9], gammaSliderText, NULL, &shaders->gamma, 0, 4.4f);
   if(GuiButton(layoutRecs[10], saveButtonText)) SaveButton();
+
+  GuiUnlock();
 }
 
 void ShaderSettingsMenu::SaveButton() {

@@ -188,6 +188,7 @@ struct MainMenu {
   ChatGroup chat;
   MusicGroup music;
   PartyGroup party;
+  bool shouldProcessInput = false;
 
   Settings* s;
 

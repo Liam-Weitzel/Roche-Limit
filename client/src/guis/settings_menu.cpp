@@ -30,7 +30,7 @@ void SettingsMenu::Init(GameState& state) {
 void SettingsMenu::Draw() {
   if(!active) return;
 
-  if (displayDropdownBoxEditMode) GuiLock();
+  if (displayDropdownBoxEditMode || !shouldProcessInput) GuiLock();
 
   active = !GuiWindowBox(layoutRecs[0], settingsWindowBoxText);
   if (GuiSpinner(layoutRecs[1], uiStyleSpinnerText, &uiStyleSpinnerValue, 0, 10, uiStyleSpinnerEditMode)) uiStyleSpinnerEditMode = !uiStyleSpinnerEditMode;
