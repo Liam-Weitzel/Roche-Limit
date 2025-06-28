@@ -99,6 +99,7 @@ void GUI::Open(DraggableWindow* window) {
   };
   window->active = true;
   BringToFront(window);
+  window->dirty = true;
 }
 
 void GUI::Close(DraggableWindow* window) {

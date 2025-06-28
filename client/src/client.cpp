@@ -34,20 +34,15 @@ void init(GameState& state) {
       ResourceManager& resourceManager = state.reloadArena.create<ResourceManager>();
       state.renderResources.resourceManager = &resourceManager;
 
-      int idRoverBody = rresGetResourceId(dir, "rover_body.bin");
-      rresResourceChunk chunkRoverBody = rresLoadResourceChunk("resources.rres", idRoverBody);
-      Model& body = LoadModelFromChunk(chunkRoverBody, state.reloadArena);
-      resourceManager.roverAssets.body = &body;
+      int idRover = rresGetResourceId(dir, "rover.bin");
+      rresResourceChunk chunkRover = rresLoadResourceChunk("resources.rres", idRover);
+      Model& rover = LoadModelFromChunk(chunkRover, state.reloadArena);
+      resourceManager.roverAssets.rover = &rover;
 
-      int idRoverScan = rresGetResourceId(dir, "rover_scan.bin");
-      rresResourceChunk chunkRoverScan = rresLoadResourceChunk("resources.rres", idRoverScan);
-      Model& scan = LoadModelFromChunk(chunkRoverScan, state.reloadArena);
-      resourceManager.roverAssets.scan = &scan;
-
-      int idRoverWheel = rresGetResourceId(dir, "rover_wheel.bin");
-      rresResourceChunk chunkRoverWheel = rresLoadResourceChunk("resources.rres", idRoverWheel);
-      Model& wheel = LoadModelFromChunk(chunkRoverWheel, state.reloadArena);
-      resourceManager.roverAssets.wheel = &wheel;
+      int idDriveAnimation = rresGetResourceId(dir, "rover_Drive.anim");
+      rresResourceChunk chunkDriveAnimation = rresLoadResourceChunk("resources.rres", idDriveAnimation);
+      ModelAnimation& driveAnimation = LoadModelAnimationFromChunk(chunkDriveAnimation, state.reloadArena);
+      resourceManager.roverAssets.driveAnimation = &driveAnimation;
 
       Shaders& shaders = state.reloadArena.create<Shaders>();
       state.renderResources.shaders = &shaders;
@@ -66,9 +61,7 @@ void init(GameState& state) {
       delete[] vsCode;
       delete[] fsCode;
 
-      rresUnloadResourceChunk(chunkRoverBody);
-      rresUnloadResourceChunk(chunkRoverScan);
-      rresUnloadResourceChunk(chunkRoverWheel);
+      rresUnloadResourceChunk(chunkRover);
       rresUnloadResourceChunk(shadowVsChunk);
       rresUnloadResourceChunk(shadowFsChunk);
 
@@ -90,13 +83,8 @@ void init(GameState& state) {
       shaders.shadowMapResolutionLoc = GetShaderLocation(shaders.shadowShader, "shadowMapResolution");
       SetShaderValue(shaders.shadowShader, shaders.shadowMapResolutionLoc, &shaders.shadowMapResolution, SHADER_UNIFORM_INT);
 
-      for (int i = 0; i < resourceManager.roverAssets.body->materialCount; i++) {
-        resourceManager.roverAssets.body->materials[i].shader =
-            shaders.shadowShader;
-      }
-
-      for (int i = 0; i < resourceManager.roverAssets.wheel->materialCount; i++) {
-        resourceManager.roverAssets.wheel->materials[i].shader =
+      for (int i = 0; i < resourceManager.roverAssets.rover->materialCount; i++) {
+        resourceManager.roverAssets.rover->materials[i].shader =
             shaders.shadowShader;
       }
 
@@ -209,11 +197,7 @@ void render(GameState& state) {
         ResourceManager& resourceManager = *state.renderResources.resourceManager;
 
         RoverAssets& roverAssets = resourceManager.roverAssets;
-        DrawModelEx(*roverAssets.body, roverAssets.bodyOffset, roverAssets.bodyRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-        DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[0], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-        DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[1], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-        DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[2], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-        DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[3], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
+        DrawModelEx(*roverAssets.rover, roverAssets.offset, roverAssets.rotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
 
       EndMode3D();
       EndTextureMode();
@@ -230,12 +214,7 @@ void render(GameState& state) {
       rlSetUniform(shaders.shadowMapLoc, &slot, SHADER_UNIFORM_INT, 1);
 
       BeginMode3D(cameras.camera);
-      DrawModelEx(*roverAssets.scan, roverAssets.scanOffset, roverAssets.scanRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-      DrawModelEx(*roverAssets.body, roverAssets.bodyOffset, roverAssets.bodyRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-      DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[0], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-      DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[1], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-      DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[2], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
-      DrawModelEx(*roverAssets.wheel, roverAssets.wheelOffsets[3], roverAssets.wheelRotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
+      DrawModelEx(*roverAssets.rover, roverAssets.offset, roverAssets.rotationAxis, 0.0f, {1.0f, 1.0f, 1.0f}, roverAssets.tint);
       EndMode3D();
 
       DrawFPS(10, 10);
@@ -298,6 +277,11 @@ void update(GameState& state) {
       SetShaderValue(shaders.shadowShader,
                      shaders.lightDirLoc,
                      &shaders.lightDir, SHADER_UNIFORM_VEC3);
+
+      RoverAssets& roverAssets = state.renderResources.resourceManager->roverAssets;
+      if(state.frameCount % 10 == 0) roverAssets.animFrameCounter++;
+      UpdateModelAnimation(*roverAssets.rover, *roverAssets.driveAnimation, roverAssets.animFrameCounter);
+      if (roverAssets.animFrameCounter >= roverAssets.driveAnimation->frameCount) roverAssets.animFrameCounter = 0;
 
       if(state.renderResources.gui->shaderSettingsMenu.active) state.renderResources.shaders->upload();
       state.renderResources.gui->Update();

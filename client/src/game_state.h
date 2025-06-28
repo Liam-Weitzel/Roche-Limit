@@ -8,17 +8,12 @@
 #include "input.h"
 
 struct RoverAssets { // Reload
-  Model* body = nullptr;
-  Vector3 bodyOffset = {0.0f, 0.5f, 0.0f};
-  Vector3 bodyRotationAxis = {0.0f, 1.0f, 0.0f};
-  Model* wheel = nullptr;
-  Vector3 wheelOffsets[4] = {
-    {0.0f, 0.5f, 0.0f},    // backLeft
-    {-2.1f, 0.5f, 0.0f},   // backRight
-    {0.0f, 0.5f, -1.25f},  // frontLeft
-    {-2.1f, 0.5f, -1.25f}  // frontRight
-  };
-  Vector3 wheelRotationAxis = {0.0f, 1.0f, 0.0f};
+  Model* rover = nullptr;
+  ModelAnimation* driveAnimation = nullptr;
+  int animsCount = 0;
+  int animFrameCounter = 0;
+  Vector3 offset = {0.0f, 0.5f, 0.0f};
+  Vector3 rotationAxis = {180.0f, 0.0f, 0.0f};
   Model* scan = nullptr;
   Vector3 scanOffset = {0.0f, 0.5f, 0.0f};
   Vector3 scanRotationAxis = {0.0f, 1.0f, 0.0f};

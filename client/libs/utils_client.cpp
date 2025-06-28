@@ -318,6 +318,69 @@ Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena& arena) {
   return model;
 }
 
+ModelAnimation& LoadModelAnimationFromChunk(const rresResourceChunk &chunk, Arena& arena) {
+  ModelAnimation& anim = arena.alloc<ModelAnimation>();
+
+  if (!chunk.data.raw) {
+    LOG_ERROR("Chunk data is null");
+    return anim;
+  }
+
+  const unsigned char *data = (const unsigned char *)chunk.data.raw;
+  size_t offset = 0;
+
+  // Read counts
+  memcpy(&anim.boneCount, data + offset, sizeof(int));
+  offset += sizeof(int);
+
+  memcpy(&anim.frameCount, data + offset, sizeof(int));
+  offset += sizeof(int);
+
+  // Read name
+  memcpy(anim.name, data + offset, sizeof(char) * 32);
+  offset += sizeof(char) * 32;
+
+  // Read bones
+  if (anim.boneCount > 0) {
+    size_t boneSize = sizeof(BoneInfo) * anim.boneCount;
+    anim.bones = arena.alloc_raw<BoneInfo>(boneSize);
+    LOG_ASSERT(anim.bones != nullptr, "Failed to allocate memory for bones");
+    memcpy(anim.bones, data + offset, boneSize);
+    offset += boneSize;
+  }
+
+  // Read frame poses
+  if (anim.frameCount > 0 && anim.boneCount > 0) {
+    // Allocate array of frame pose pointers
+    anim.framePoses = arena.alloc_raw<Transform*>(sizeof(Transform*) * anim.frameCount);
+    LOG_ASSERT(anim.framePoses != nullptr, "Failed to allocate memory for frame poses");
+
+    // Allocate and read each frame's poses
+    for (int frame = 0; frame < anim.frameCount; frame++) {
+      anim.framePoses[frame] = arena.alloc_raw<Transform>(sizeof(Transform) * anim.boneCount);
+      LOG_ASSERT(anim.framePoses[frame] != nullptr, "Failed to allocate memory for frame pose");
+
+      for (int bone = 0; bone < anim.boneCount; bone++) {
+        Transform& transform = anim.framePoses[frame][bone];
+
+        // Read translation
+        memcpy(&transform.translation, data + offset, sizeof(Vector3));
+        offset += sizeof(Vector3);
+
+        // Read rotation
+        memcpy(&transform.rotation, data + offset, sizeof(Quaternion));
+        offset += sizeof(Quaternion);
+
+        // Read scale
+        memcpy(&transform.scale, data + offset, sizeof(Vector3));
+        offset += sizeof(Vector3);
+      }
+    }
+  }
+
+  return anim;
+}
+
 // NOTE: Clean the shader code of padded bytes for use with rres
 char* cleanShaderCode(const rresResourceChunk& chunk) {
   const char* rawCode = (const char*)chunk.data.raw;

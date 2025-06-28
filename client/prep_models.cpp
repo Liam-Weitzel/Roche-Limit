@@ -412,6 +412,79 @@ Model& LoadModelFromChunkTest(const rresResourceChunk &chunk, Model &testModel, 
   return model;
 }
 
+ModelAnimation& LoadModelAnimationFromChunkTest(const rresResourceChunk &chunk, ModelAnimation &testAnim, Arena& arena) {
+  ModelAnimation& anim = arena.alloc<ModelAnimation>();
+
+  if (!chunk.data.raw) {
+    LOG_ERROR("Chunk data is null");
+    return anim;
+  }
+
+  const unsigned char *data = (const unsigned char *)chunk.data.raw;
+  size_t offset = 0;
+
+  // Read counts
+  memcpy(&anim.boneCount, data + offset, sizeof(int));
+  LOG_ASSERT(anim.boneCount == testAnim.boneCount, "testAnim and anim don't match...");
+  offset += sizeof(int);
+
+  memcpy(&anim.frameCount, data + offset, sizeof(int));
+  LOG_ASSERT(anim.frameCount == testAnim.frameCount, "testAnim and anim don't match...");
+  offset += sizeof(int);
+
+  // Read name
+  memcpy(anim.name, data + offset, sizeof(char) * 32);
+  LOG_ASSERT(strcmp(anim.name, testAnim.name) == 0, "testAnim and anim don't match...");
+  offset += sizeof(char) * 32;
+
+  // Read bones
+  if (anim.boneCount > 0) {
+    size_t boneSize = sizeof(BoneInfo) * anim.boneCount;
+    anim.bones = arena.alloc_raw<BoneInfo>(boneSize);
+    LOG_ASSERT(anim.bones != nullptr, "Failed to allocate memory for bones");
+    memcpy(anim.bones, data + offset, boneSize);
+    LOG_ASSERT(CompareBones(anim.bones, testAnim.bones, boneSize), "testAnim and anim don't match...");
+    offset += boneSize;
+  }
+
+  // Read frame poses
+  if (anim.frameCount > 0 && anim.boneCount > 0) {
+    // Allocate array of frame pose pointers
+    anim.framePoses = arena.alloc_raw<Transform*>(sizeof(Transform*) * anim.frameCount);
+    LOG_ASSERT(anim.framePoses != nullptr, "Failed to allocate memory for frame poses");
+
+    // Allocate and read each frame's poses
+    for (int frame = 0; frame < anim.frameCount; frame++) {
+      anim.framePoses[frame] = arena.alloc_raw<Transform>(sizeof(Transform) * anim.boneCount);
+      LOG_ASSERT(anim.framePoses[frame] != nullptr, "Failed to allocate memory for frame pose");
+
+      for (int bone = 0; bone < anim.boneCount; bone++) {
+        Transform& transform = anim.framePoses[frame][bone];
+
+        // Read translation
+        memcpy(&transform.translation, data + offset, sizeof(Vector3));
+        LOG_ASSERT(CompareVector3(transform.translation, testAnim.framePoses[frame][bone].translation), 
+                   "testAnim and anim don't match...");
+        offset += sizeof(Vector3);
+
+        // Read rotation
+        memcpy(&transform.rotation, data + offset, sizeof(Quaternion));
+        LOG_ASSERT(CompareVector4(transform.rotation, testAnim.framePoses[frame][bone].rotation), 
+                   "testAnim and anim don't match...");
+        offset += sizeof(Quaternion);
+
+        // Read scale
+        memcpy(&transform.scale, data + offset, sizeof(Vector3));
+        LOG_ASSERT(CompareVector3(transform.scale, testAnim.framePoses[frame][bone].scale), 
+                   "testAnim and anim don't match...");
+        offset += sizeof(Vector3);
+      }
+    }
+  }
+
+  return anim;
+}
+
 void ExportModelToBinary(const Model &model, const char *filename, Arena& arena) {
   if (!filename)
     return;
@@ -654,6 +727,53 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
   write_file(filename, buffer, current - buffer);
 }
 
+void ExportModelAnimationToBinary(const ModelAnimation &anim, const char *filename, Arena& arena) {
+  if (!filename) return;
+
+  char* buffer = arena.alloc_raw<char>(KB(50));
+  char* current = buffer;
+
+  // Write counts
+  memcpy(current, &anim.boneCount, sizeof(int));
+  current += sizeof(int);
+  memcpy(current, &anim.frameCount, sizeof(int));
+  current += sizeof(int);
+
+  // Write name
+  memcpy(current, anim.name, sizeof(char) * 32);
+  current += sizeof(char) * 32;
+
+  // Write bones if they exist
+  if (anim.bones) {
+    size_t boneSize = sizeof(BoneInfo) * anim.boneCount;
+    memcpy(current, anim.bones, boneSize);
+    current += boneSize;
+  }
+
+  // Write frame poses
+  if (anim.framePoses) {
+    for (int frame = 0; frame < anim.frameCount; frame++) {
+      for (int bone = 0; bone < anim.boneCount; bone++) {
+        const Transform& transform = anim.framePoses[frame][bone];
+        
+        // Write translation
+        memcpy(current, &transform.translation, sizeof(Vector3));
+        current += sizeof(Vector3);
+        
+        // Write rotation
+        memcpy(current, &transform.rotation, sizeof(Quaternion));
+        current += sizeof(Quaternion);
+        
+        // Write scale
+        memcpy(current, &transform.scale, sizeof(Vector3));
+        current += sizeof(Vector3);
+      }
+    }
+  }
+
+  write_file(filename, buffer, current - buffer);
+}
+
 bool PackResources() {
   // Check if rrespacker exists
   FILE* test = fopen(RRESPACKER_PATH, "r");
@@ -678,39 +798,100 @@ int main(int argc, char *argv[]) {
 
   Arena& arena = * new Arena(MB(1));
   MapCT<const char*, Model, 100>& modelMap = arena.create_map_ct<const char*, Model, 100>();
+  // Store both animations and count
+  struct AnimData {
+    ModelAnimation* animations;
+    int count;
+  };
+  MapCT<const char*, AnimData, 100>& animMap = arena.create_map_ct<const char*, AnimData, 100>();
 
   ArrayCT<const char*, 100>& allFiles = listFiles("resources/models", arena);
 
   ArrayCT<const char*, 100>& models = arena.create_array_ct<const char*, 100>();
   for (uint32_t i = 0; i < allFiles.size(); i++) {
-      if (strstr(allFiles[i], ".glb")) {
-          models.add(allFiles[i]);
-      }
+    if (strstr(allFiles[i], ".glb")) {
+      models.add(allFiles[i]);
+    }
   }
 
   const char* OUTPUT_DIR = "./resources/models/";
   char out_path[256];
+  char anim_path[256];
 
   for (uint32_t i = 0; i < models.size(); i++) {
     const char *in = models[i];
     const char *filename = strrchr(in, '/');
     filename = filename ? filename + 1 : in;
 
-    // Create binary filename without .obj extension
+    // Create binary filename without .glb extension
     char bin_filename[256];
     snprintf(bin_filename, sizeof(bin_filename), "%.*s.bin", (int)(strlen(filename) - 4), filename);
 
-    // Construct full output path
+    // Create animation binary filename
+    char anim_filename[256];
+    snprintf(anim_filename, sizeof(anim_filename), "%.*s.anim", (int)(strlen(filename) - 4), filename);
+
+    // Construct full output paths
     size_t remaining = sizeof(out_path);
     strncpy(out_path, OUTPUT_DIR, remaining);
     remaining -= strlen(OUTPUT_DIR);
     strncat(out_path, bin_filename, remaining - 1);
 
+    remaining = sizeof(anim_path);
+    strncpy(anim_path, OUTPUT_DIR, remaining);
+    remaining -= strlen(OUTPUT_DIR);
+    strncat(anim_path, anim_filename, remaining - 1);
+
     LOG_TRACE("%s -> %s", in, out_path);
+
+    // Load model and animations
     Model model = LoadModel(in);
+    int animCount = 0;
+    ModelAnimation* animations = LoadModelAnimations(in, &animCount);
+
+    // Export model
     ExportModelToBinary(model, out_path, arena);
 
-    // Store in map with persistent key
+    // Export animations if any exist
+    if (animations != nullptr && animCount > 0) {  // Changed order of checks
+      LOG_TRACE("Exporting %d animations for %s", animCount, filename);
+      for (int j = 0; j < animCount; j++) {
+        // Create unique filename using animation name
+        char numbered_anim_path[256];
+        size_t max_len = sizeof(numbered_anim_path);
+
+        // Remove the .anim extension before adding the animation name
+        const char* base_anim_path = anim_path;
+        size_t anim_path_len = strlen(anim_path);
+        if (anim_path_len > 5) {  // Make sure we have enough characters for ".anim"
+          anim_path_len -= 5;  // Remove ".anim"
+        }
+
+        int written = snprintf(numbered_anim_path, max_len, 
+                               "%.*s_%s.anim",
+                               (int)anim_path_len,
+                               base_anim_path, 
+                               animations[j].name);
+
+        if (written < 0 || static_cast<size_t>(written) >= max_len) {
+          LOG_ERROR("Path too long for animation %s", animations[j].name);
+          continue;
+        }
+
+        ExportModelAnimationToBinary(animations[j], numbered_anim_path, arena);
+        LOG_TRACE("Exported animation '%s' to %s", animations[j].name, numbered_anim_path);
+      }
+
+      // Store in maps with persistent keys
+      size_t key_len = strlen(anim_filename) + 1;
+      char* persistent_key = arena.alloc_count_raw<char>(key_len);
+      strcpy(persistent_key, anim_filename);
+      animMap[persistent_key] = {animations, animCount};
+    } else {
+      LOG_TRACE("No animations found for %s", filename);
+    }
+
+    // Store model in map
     size_t key_len = strlen(bin_filename) + 1;
     char* persistent_key = arena.alloc_count_raw<char>(key_len);
     strcpy(persistent_key, bin_filename);
@@ -724,6 +905,8 @@ int main(int argc, char *argv[]) {
 
   // Testing
   rresCentralDir dir = rresLoadCentralDirectory("resources.rres");
+
+  // Test models
   for (auto &[path, testModel] : modelMap) {
     int idModel = rresGetResourceId(dir, path);
     rresResourceChunk chunkModel = rresLoadResourceChunk("resources.rres", idModel);
@@ -731,6 +914,65 @@ int main(int argc, char *argv[]) {
     UnloadModel(testModel);
     rresUnloadResourceChunk(chunkModel);
   }
+
+  // Test animations
+  for (auto &[path, animData] : animMap) {
+    LOG_TRACE("Testing animations for path: %s (count: %d)", path, animData.count);
+
+    // Extract base path without extension
+    char base_path[256];
+    size_t path_len = strlen(path);
+    if (path_len > 5) {
+      size_t base_len = path_len - 5; // Remove .anim
+      if (base_len >= sizeof(base_path)) {
+        base_len = sizeof(base_path) - 1;
+      }
+      strncpy(base_path, path, base_len);
+      base_path[base_len] = '\0';
+    } else {
+      strcpy(base_path, path);
+    }
+
+    LOG_TRACE("Base path for animations: %s", base_path);
+
+    // Test each animation
+    for (int animIndex = 0; animIndex < animData.count; animIndex++) {
+      char anim_path[256];
+      size_t max_len = sizeof(anim_path);
+      int written = snprintf(anim_path, max_len, "%s_%s.anim", 
+                             base_path, 
+                             animData.animations[animIndex].name);
+
+      LOG_TRACE("Trying to load animation: %s", anim_path);
+
+      if (written < 0 || static_cast<size_t>(written) >= max_len) {
+        LOG_ERROR("Path too long for animation %s", animData.animations[animIndex].name);
+        continue;
+      }
+
+      int idAnim = rresGetResourceId(dir, anim_path);
+      if (idAnim == -1) {
+        LOG_ERROR("Animation resource not found: %s (ID lookup failed)", anim_path);
+        continue;
+      }
+
+      LOG_TRACE("Found animation resource ID: 0x%08x", idAnim);
+      
+      rresResourceChunk chunkAnim = rresLoadResourceChunk("resources.rres", idAnim);
+      if (!chunkAnim.data.raw) {
+        LOG_ERROR("Failed to load animation chunk: %s (chunk data null)", anim_path);
+        continue;
+      }
+
+      ModelAnimation& animTest = LoadModelAnimationFromChunkTest(chunkAnim, animData.animations[animIndex], arena);
+      rresUnloadResourceChunk(chunkAnim);
+    }
+
+    // Unload original animations
+    UnloadModelAnimations(animData.animations, animData.count);
+  }
+
+  LOG_TRACE("Done!!");
 
   rresUnloadCentralDirectory(dir);
   delete &arena;

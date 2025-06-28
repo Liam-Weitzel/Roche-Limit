@@ -12,9 +12,8 @@ f ./resources/styles/lavanda.rgs@lavanda.rgs,0,0,0,0,0
 f ./resources/styles/sunny.rgs@sunny.rgs,0,0,0,0,0
 f ./resources/styles/terminal.rgs@terminal.rgs,0,0,0,0,0
 
-f ./resources/models/rover_body.bin@rover_body.bin,0,0,0,0,0
-f ./resources/models/rover_scan.bin@rover_scan.bin,0,0,0,0,0
-f ./resources/models/rover_wheel.bin@rover_wheel.bin,0,0,0,0,0
+f ./resources/models/rover.bin@rover.bin,0,0,0,0,0
+f ./resources/models/rover_Drive.anim@rover_Drive.anim,0,0,0,0,0
 
 f ./resources/shaders/shadowmap_120.fs@shadowmap_120.fs,0,0,0,0,0
 f ./resources/shaders/shadowmap_120.vs@shadowmap_120.vs,0,0,0,0,0
