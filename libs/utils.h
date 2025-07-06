@@ -585,7 +585,10 @@ struct KeyCompare {
     if (sizeof(K) == sizeof(char*)) {
       const char* str_a = (const char*)a;
       const char* str_b = (const char*)b;
-      return str_a && str_b && strcmp(str_a, str_b) == 0;
+      if (str_a != NULL && str_b != NULL) {
+        return strcmp(str_a, str_b) == 0;
+      }
+      return false;
     }
     // Handle char arrays
     else if (sizeof(K) > 1 && ((const char*)&a)[0] != '\0') {
@@ -802,17 +805,18 @@ struct Hash {
   uint32_t operator()(const T& key) const = delete;
 };
 
+unsigned int HashCombine(unsigned int hash, const void* data, size_t size); // DJB2a
+
 template<>
-struct Hash<int> {
+struct Hash<int> { // Knuth's Multiplicative
   uint32_t operator()(const int& key) const {
     return key * 2654435761u;
   }
 };
 
 template<>
-struct Hash<const char*> {
+struct Hash<const char*> { //FNV-1a
   unsigned long long operator()(const char* key) const {
-    // FNV-1a hash
     unsigned long long hash = 14695981039346656037ULL;
     for(; *key; ++key) {
       hash ^= *key;

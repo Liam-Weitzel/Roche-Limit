@@ -13,7 +13,12 @@ f ./resources/styles/sunny.rgs@sunny.rgs,0,0,0,0,0
 f ./resources/styles/terminal.rgs@terminal.rgs,0,0,0,0,0
 
 f ./resources/models/rover.bin@rover.bin,0,0,0,0,0
-f ./resources/models/rover_Drive.anim@rover_Drive.anim,0,0,0,0,0
+f ./resources/animations/rover_Drive.anim@rover_Drive.anim,0,0,0,0,0
+
+f ./resources/materials/caa4b122.mat@caa4b122.mat,0,0,0,0,0
+f ./resources/materials/65eb548a.mat@65eb548a.mat,0,0,0,0,0
+
+f ./resources/models/monkey.bin@monkey.bin,0,0,0,0,0
 
 f ./resources/shaders/shadowmap_120.fs@shadowmap_120.fs,0,0,0,0,0
 f ./resources/shaders/shadowmap_120.vs@shadowmap_120.vs,0,0,0,0,0

@@ -11,7 +11,7 @@
 #define RL_MAX_SHADER_LOCATIONS 32
 
 // NOTE: Load model from chunk for use with rres
-Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena &arena);
+Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena& arena, MapCT<const char*, Material, 100>& materialPool, rresCentralDir& dir);
 ModelAnimation& LoadModelAnimationFromChunk(const rresResourceChunk &chunk, Arena& arena);
 // NOTE: Clean the shader code of padded bytes for use with rres
 char* cleanShaderCode(const rresResourceChunk& chunk);

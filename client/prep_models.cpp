@@ -10,7 +10,7 @@
 #define MAX_MATERIAL_MAPS 12
 #define RL_MAX_SHADER_LOCATIONS 32
 
-Model& LoadModelFromChunkTest(const rresResourceChunk &chunk, Model &testModel, Arena& arena) {
+Model& LoadModelFromChunkTest(const rresResourceChunk &chunk, Model &testModel, Arena& arena, MapCT<const char*, Material, 100>& materialPool, rresCentralDir& dir) {
   Model& model = arena.alloc<Model>();
 
   if (!chunk.data.raw) {
@@ -273,81 +273,108 @@ Model& LoadModelFromChunkTest(const rresResourceChunk &chunk, Model &testModel, 
   // Read materials
   if (globalFlags & 2) {
     int size = model.materialCount * sizeof(Material);
+    // TODO: should this be allocated here? what if we overwrite it later...
     model.materials = arena.alloc_raw<Material>(size);
     LOG_ASSERT(model.materials != nullptr,
                "Failed to allocate memory for materials: %zu bytes", size);
 
     for (int i = 0; i < model.materialCount; i++) {
-      Material& material = model.materials[i];
+      const char* materialId = (const char*)(data + offset);
+      offset += sizeof(char[128]);
 
-      // Initialize material pointers
-      material.shader.locs = nullptr;
-      material.maps = nullptr;
+      LOG_TRACE("Reading Material id: %s", materialId);
 
-      unsigned char matFlags;
-      memcpy(&matFlags, data + offset, sizeof(unsigned char));
-      offset += sizeof(unsigned char);
+      if(materialPool.contains(materialId)) {
+        LOG_TRACE("Duplicate found!");
+        model.materials[i] = materialPool.get(materialId); // fetch ptr to existing material
+      } else {
+        LOG_TRACE("Creating a new material!");
 
-      // Read shader ID
-      memcpy(&material.shader.id, data + offset, sizeof(unsigned int));
-      LOG_ASSERT(model.materials[i].shader.id ==
-                     testModel.materials[i].shader.id,
-                 "testModel and model don't match...");
-      offset += sizeof(unsigned int);
+        size_t sizeInBytes = strlen(materialId) + 1;
+        char* materialIdOnHeap = arena.alloc_raw<char>(sizeInBytes);
+        memcpy(materialIdOnHeap, materialId, sizeInBytes);
 
-      // Read shader locations
-      if (matFlags & 1) {
-        size_t size = RL_MAX_SHADER_LOCATIONS * sizeof(int);
-        material.shader.locs = arena.alloc_raw<int>(size);
-        LOG_ASSERT(material.shader.locs != nullptr,
-                   "Failed to allocate memory for shader locations: %zu bytes",
-                   size);
-        memcpy(material.shader.locs, data + offset, size);
-        LOG_ASSERT(CompareIntArrays(model.materials[i].shader.locs,
-                                     testModel.materials[i].shader.locs, size),
-                   "testModel and model don't match...");
-        offset += size;
-      }
-      // Read material maps
-      if (matFlags & 2) {
-        size_t size = MAX_MATERIAL_MAPS * sizeof(MaterialMap);
-        material.maps = arena.alloc_raw<MaterialMap>(size);
-        LOG_ASSERT(material.maps != nullptr,
-                   "Failed to allocate memory for material maps: %zu bytes",
-                   size);
+        model.materials[i] = materialPool.get(materialIdOnHeap); // create new material & return ptr
+        Material& material = model.materials[i];
+        size_t materialOffset = 0;
 
-        // Read each material map
-        for (int j = 0; j < MAX_MATERIAL_MAPS; j++) {
-          // Read texture
-          memcpy(&material.maps[j].texture, data + offset, sizeof(Texture));
-          LOG_ASSERT(CompareTexture(model.materials[i].maps[j].texture,
-                                    testModel.materials[i].maps[j].texture),
-                     "testModel and model don't match...");
-          offset += sizeof(Texture);
+        char combined[256];
+        snprintf(combined, sizeof(combined), "%s%s", materialId, ".mat");
+        int rresMaterialId = rresGetResourceId(dir, combined);
+        rresResourceChunk chunkMaterial = rresLoadResourceChunk("resources.rres", rresMaterialId);
+        const unsigned char* materialData = static_cast<const unsigned char*>(chunkMaterial.data.raw);
 
-          // Read color
-          memcpy(&material.maps[j].color, data + offset, sizeof(Color));
-          LOG_ASSERT(CompareColor(model.materials[i].maps[j].color,
-                                  testModel.materials[i].maps[j].color),
-                     "testModel and model don't match...");
-          offset += sizeof(Color);
+        // Initialize material pointers
+        material.shader.locs = nullptr;
+        material.maps = nullptr;
 
-          // Read value
-          memcpy(&material.maps[j].value, data + offset, sizeof(float));
-          LOG_ASSERT(model.materials[i].maps[j].value ==
-                         testModel.materials[i].maps[j].value,
-                     "testModel and model don't match...");
-          offset += sizeof(float);
+        unsigned char matFlags;
+        memcpy(&matFlags, materialData + materialOffset, sizeof(unsigned char));
+        materialOffset += sizeof(unsigned char);
+
+        // Read shader ID
+        memcpy(&material.shader.id, materialData + materialOffset, sizeof(unsigned int));
+        materialOffset += sizeof(unsigned int);
+
+        // Read shader locations
+        if (matFlags & 1) {
+          size_t size = RL_MAX_SHADER_LOCATIONS * sizeof(int);
+          material.shader.locs = arena.alloc_raw<int>(size);
+          memcpy(material.shader.locs, materialData + materialOffset, size);
+          materialOffset += size;
         }
-      }
+        // Read material maps
+        if (matFlags & 2) {
+          size_t size = MAX_MATERIAL_MAPS * sizeof(MaterialMap);
+          material.maps = arena.alloc_raw<MaterialMap>(size);
 
-      // Read material params (all 4 floats)
-      memcpy(&material.params, data + offset, sizeof(float) * 4);
-      LOG_ASSERT(CompareFloatArrays(model.materials[i].params,
-                                    testModel.materials[i].params,
-                                    sizeof(float) * 4),
-                 "testModel and model don't match...");
-      offset += sizeof(float) * 4;
+          // Read each material map
+          for (int j = 0; j < MAX_MATERIAL_MAPS; j++) {
+            // Read texture
+            memcpy(&material.maps[j].texture, materialData + materialOffset, sizeof(Texture));
+            materialOffset += sizeof(Texture);
+
+            // Read color
+            memcpy(&material.maps[j].color, materialData + materialOffset, sizeof(Color));
+            materialOffset += sizeof(Color);
+
+            // Read value
+            memcpy(&material.maps[j].value, materialData + materialOffset, sizeof(float));
+            materialOffset += sizeof(float);
+
+            if(IsTextureValid(material.maps[j].texture)) {
+              long unsigned int pixelDataSize = GetPixelDataSize(material.maps[j].texture.width, material.maps[j].texture.height, material.maps[j].texture.format);
+              // Creating a local stack buffer
+              // WARNING: For large images this might be unsafe, upgrade to max size and heap allocation if needed!!
+              unsigned char pixelDataStack[1024*1024*4];
+
+              // Safety check
+              LOG_ASSERT(pixelDataSize <= sizeof(pixelDataStack), "Texture is too large...");
+
+              memcpy(pixelDataStack, materialData + materialOffset, pixelDataSize);
+              materialOffset += pixelDataSize;
+
+              Image img = {}; // Also stack?
+              img.data = &pixelDataStack;
+              img.height = material.maps[j].texture.height;
+              img.width = material.maps[j].texture.width;
+              img.format = material.maps[j].texture.format;
+              img.mipmaps = material.maps[j].texture.mipmaps;
+              material.maps[j].texture = LoadTextureFromImage(img); //atleast this is heap
+            }
+          }
+        }
+
+        // Read material params (all 4 floats)
+        memcpy(&material.params, materialData + materialOffset, sizeof(float) * 4);
+        LOG_ASSERT(CompareFloatArrays(model.materials[i].params,
+                                      testModel.materials[i].params,
+                                      sizeof(float) * 4),
+                   "testModel and model don't match...");
+        materialOffset += sizeof(float) * 4;
+
+        rresUnloadResourceChunk(chunkMaterial);
+      }
     }
   }
 
@@ -485,11 +512,111 @@ ModelAnimation& LoadModelAnimationFromChunkTest(const rresResourceChunk &chunk, 
   return anim;
 }
 
+void GetMaterialId(const Material& material, char* outBuffer, size_t bufferSize) {
+  unsigned int hash = 5381;
+
+  // Hash all material maps
+  for (int i = 0; i < MAX_MATERIAL_MAPS; i++) {
+    const MaterialMap& map = material.maps[i];
+
+    // Hash color and value
+    hash = HashCombine(hash, &map.color, sizeof(map.color));
+    hash = HashCombine(hash, &map.value, sizeof(map.value));
+
+    // Hash texture data if present
+    if (IsTextureValid(map.texture)) {
+      Image img = LoadImageFromTexture(map.texture);
+      hash = HashCombine(hash, &img.width, sizeof(img.width));
+      hash = HashCombine(hash, &img.height, sizeof(img.height));
+      hash = HashCombine(hash, &img.format, sizeof(img.format));
+      hash = HashCombine(hash, img.data, GetPixelDataSize(img.width, img.height, img.format));
+      UnloadImage(img);
+    }
+  }
+
+  snprintf(outBuffer, bufferSize, "%08x", hash);
+}
+
+void ExportMaterialsToBinary(const Model &model, const char *mat_path, Arena& arena) {
+  if (model.materials) {
+    for (int i = 0; i < model.materialCount; i++) {
+      char* buffer = arena.alloc_raw<char>(MB(200));
+      char* current = buffer;
+
+      char matId[128];  // Buffer for the material ID/ file name
+      GetMaterialId(model.materials[i], matId, sizeof(matId));
+      LOG_TRACE("Writing Material ID: %s", matId);
+
+      const Material &material = model.materials[i];
+
+      // Write material flags
+      unsigned char matFlags = 0;
+      matFlags |= (material.shader.locs ? 1 : 0);
+      matFlags |= (material.maps ? 2 : 0);
+      memcpy(current, &matFlags, sizeof(unsigned char));
+      current += sizeof(unsigned char);
+      // LOG_TRACE("After material %i material flags: %zu bytes\n", i, current - buffer);
+
+      // Write shader  NOTE: this is kinda stupid, no shaders will be applied at write time
+      memcpy(current, &material.shader.id, sizeof(unsigned int));
+      current += sizeof(unsigned int);
+      // LOG_TRACE("After material %i shader id: %zu bytes\n", i, current - buffer);
+
+      if (material.shader.locs) {
+        size_t size = sizeof(int) * RL_MAX_SHADER_LOCATIONS;
+        memcpy(current, material.shader.locs, size);
+        current += size;
+        // LOG_TRACE("After material %i shader locs: %zu bytes\n", i, current - buffer);
+      }
+
+      // Write material maps
+      if (material.maps) {
+        for (int j = 0; j < MAX_MATERIAL_MAPS; j++) {
+          const MaterialMap &map = material.maps[j];
+
+          // Serialize Texture struct from map
+          memcpy(current, &map.texture, sizeof(Texture));
+          current += sizeof(Texture);
+
+          // Serialize Color and float value from map
+          memcpy(current, &map.color, sizeof(Color));
+          current += sizeof(Color);
+          memcpy(current, &map.value, sizeof(float));
+          current += sizeof(float);
+
+          if(IsTextureValid(material.maps[j].texture)) {
+            // Load image from GPU texture for raw pixel serialization
+            Image img = LoadImageFromTexture(map.texture);
+
+            // Calculate size of pixel data for serialization
+            int pixelDataSize = GetPixelDataSize(img.width, img.height, img.format);
+
+            // Serialize raw pixel data
+            memcpy(current, img.data, pixelDataSize);
+            current += pixelDataSize;
+            UnloadImage(img);
+          }
+        }
+      }
+
+      // Write material parameters
+      memcpy(current, material.params, sizeof(float) * 4);
+      current += sizeof(float) * 4;
+      // LOG_TRACE("After material %i params: %zu bytes\n", i, current - buffer);
+
+      // Create full path + name
+      char combined[256];
+      snprintf(combined, sizeof(combined), "%s%s%s", mat_path, matId, ".mat");
+      write_file(combined, buffer, current - buffer);
+    }
+  }
+}
+
 void ExportModelToBinary(const Model &model, const char *filename, Arena& arena) {
   if (!filename)
     return;
 
-  char* buffer = arena.alloc_raw<char>(KB(50));
+  char* buffer = arena.alloc_raw<char>(MB(500));
   char* current = buffer;
 
   // Write transform matrix
@@ -641,48 +768,10 @@ void ExportModelToBinary(const Model &model, const char *filename, Arena& arena)
   // Write materials
   if (model.materials) {
     for (int i = 0; i < model.materialCount; i++) {
-      const Material &material = model.materials[i];
-
-      // Write material flags
-      unsigned char matFlags = 0;
-      matFlags |= (material.shader.locs ? 1 : 0);
-      matFlags |= (material.maps ? 2 : 0);
-      memcpy(current, &matFlags, sizeof(unsigned char));
-      current += sizeof(unsigned char);
-      // LOG_TRACE("After material %i material flags: %zu bytes\n", i, current - buffer);
-
-      // Write shader
-      memcpy(current, &material.shader.id, sizeof(unsigned int));
-      current += sizeof(unsigned int);
-      // LOG_TRACE("After material %i shader id: %zu bytes\n", i, current - buffer);
-
-      if (material.shader.locs) {
-        size_t size = sizeof(int) * RL_MAX_SHADER_LOCATIONS;
-        memcpy(current, material.shader.locs, size);
-        current += size;
-        // LOG_TRACE("After material %i shader locs: %zu bytes\n", i, current - buffer);
-      }
-
-      // Write material maps
-      if (material.maps) {
-        for (int j = 0; j < MAX_MATERIAL_MAPS; j++) {
-          const MaterialMap &map = material.maps[j];
-          memcpy(current, &map.texture, sizeof(Texture));
-          current += sizeof(Texture);
-          // LOG_TRACE("After material %i map %i texture: %zu bytes\n", i, j, current - buffer);
-          memcpy(current, &map.color, sizeof(Color));
-          current += sizeof(Color);
-          // LOG_TRACE("After material %i map %i color: %zu bytes\n", i, j, current - buffer);
-          memcpy(current, &map.value, sizeof(float));
-          current += sizeof(float);
-          // LOG_TRACE("After material %i map %i value: %zu bytes\n", i, j, current - buffer);
-        }
-      }
-
-      // Write material parameters
-      memcpy(current, material.params, sizeof(float) * 4);
-      current += sizeof(float) * 4;
-      // LOG_TRACE("After material %i params: %zu bytes\n", i, current - buffer);
+      char matId[128];  // Buffer for the material ID/ file name
+      GetMaterialId(model.materials[i], matId, sizeof(matId));
+      memcpy(current, &matId, sizeof(char[128]));
+      current += sizeof(char[128]);
     }
   }
 
@@ -796,7 +885,7 @@ int main(int argc, char *argv[]) {
   SetConfigFlags(FLAG_WINDOW_HIDDEN);
   InitWindow(800, 450, "prep models");
 
-  Arena& arena = * new Arena(MB(1));
+  Arena& arena = * new Arena(GB(3));
   MapCT<const char*, Model, 100>& modelMap = arena.create_map_ct<const char*, Model, 100>();
   // Store both animations and count
   struct AnimData {
@@ -809,13 +898,16 @@ int main(int argc, char *argv[]) {
 
   ArrayCT<const char*, 100>& models = arena.create_array_ct<const char*, 100>();
   for (uint32_t i = 0; i < allFiles.size(); i++) {
-    if (strstr(allFiles[i], ".glb")) {
+    if (strstr(allFiles[i], ".gltf")) {
       models.add(allFiles[i]);
     }
   }
 
-  const char* OUTPUT_DIR = "./resources/models/";
-  char out_path[256];
+  const char* MODELS_OUTPUT_DIR = "./resources/models/";
+  const char* ANIMATIONS_OUTPUT_DIR = "./resources/animations/";
+
+  char model_path[256];
+  const char* mat_path = "./resources/materials/";
   char anim_path[256];
 
   for (uint32_t i = 0; i < models.size(); i++) {
@@ -823,26 +915,26 @@ int main(int argc, char *argv[]) {
     const char *filename = strrchr(in, '/');
     filename = filename ? filename + 1 : in;
 
-    // Create binary filename without .glb extension
-    char bin_filename[256];
-    snprintf(bin_filename, sizeof(bin_filename), "%.*s.bin", (int)(strlen(filename) - 4), filename);
+    // Create model filename without .gltf extension
+    char model_filename[256];
+    snprintf(model_filename, sizeof(model_filename), "%.*s.bin", (int)(strlen(filename) - 5), filename);
 
     // Create animation binary filename
     char anim_filename[256];
-    snprintf(anim_filename, sizeof(anim_filename), "%.*s.anim", (int)(strlen(filename) - 4), filename);
+    snprintf(anim_filename, sizeof(anim_filename), "%.*s.anim", (int)(strlen(filename) - 5), filename);
 
     // Construct full output paths
-    size_t remaining = sizeof(out_path);
-    strncpy(out_path, OUTPUT_DIR, remaining);
-    remaining -= strlen(OUTPUT_DIR);
-    strncat(out_path, bin_filename, remaining - 1);
+    size_t remaining = sizeof(model_path);
+    strncpy(model_path, MODELS_OUTPUT_DIR, remaining);
+    remaining -= strlen(MODELS_OUTPUT_DIR);
+    strncat(model_path, model_filename, remaining - 1);
 
     remaining = sizeof(anim_path);
-    strncpy(anim_path, OUTPUT_DIR, remaining);
-    remaining -= strlen(OUTPUT_DIR);
+    strncpy(anim_path, ANIMATIONS_OUTPUT_DIR, remaining);
+    remaining -= strlen(ANIMATIONS_OUTPUT_DIR);
     strncat(anim_path, anim_filename, remaining - 1);
 
-    LOG_TRACE("%s -> %s", in, out_path);
+    LOG_TRACE("%s -> %s", in, model_path);
 
     // Load model and animations
     Model model = LoadModel(in);
@@ -850,7 +942,10 @@ int main(int argc, char *argv[]) {
     ModelAnimation* animations = LoadModelAnimations(in, &animCount);
 
     // Export model
-    ExportModelToBinary(model, out_path, arena);
+    ExportModelToBinary(model, model_path, arena);
+
+    // Export materials if any exist
+    ExportMaterialsToBinary(model, mat_path, arena);
 
     // Export animations if any exist
     if (animations != nullptr && animCount > 0) {  // Changed order of checks
@@ -892,9 +987,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Store model in map
-    size_t key_len = strlen(bin_filename) + 1;
+    size_t key_len = strlen(model_filename) + 1;
     char* persistent_key = arena.alloc_count_raw<char>(key_len);
-    strcpy(persistent_key, bin_filename);
+    strcpy(persistent_key, model_filename);
     modelMap[persistent_key] = model;
   }
 
@@ -905,12 +1000,13 @@ int main(int argc, char *argv[]) {
 
   // Testing
   rresCentralDir dir = rresLoadCentralDirectory("resources.rres");
+  MapCT<const char*, Material, 100>& materialPool = arena.create_map_ct<const char*, Material, 100>();
 
   // Test models
   for (auto &[path, testModel] : modelMap) {
     int idModel = rresGetResourceId(dir, path);
     rresResourceChunk chunkModel = rresLoadResourceChunk("resources.rres", idModel);
-    Model& modelTest = LoadModelFromChunkTest(chunkModel, testModel, arena);
+    Model& modelTest = LoadModelFromChunkTest(chunkModel, testModel, arena, materialPool, dir);
     UnloadModel(testModel);
     rresUnloadResourceChunk(chunkModel);
   }

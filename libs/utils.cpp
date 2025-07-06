@@ -157,6 +157,16 @@ ArrayCT<const char*, 100>& listFiles(const char* path, Arena& arena) {
     return files;
 }
 
+// NOTE: hash
+unsigned int HashCombine(unsigned int hash, const void* data, size_t size) { // DJB2a
+  // Start with hash = 5381
+  const unsigned char* bytes = (const unsigned char*)data;
+  for (size_t i = 0; i < size; i++) {
+    hash = ((hash << 5) + hash) + bytes[i];
+  }
+  return hash;
+}
+
 // NOTE: Testing
 bool CompareFloat(float a, float b, float epsilon) {
   return fabs(a - b) <= epsilon;

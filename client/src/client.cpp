@@ -32,11 +32,12 @@ void init(GameState& state) {
       state.renderResources.dir = &dir;
 
       ResourceManager& resourceManager = state.reloadArena.create<ResourceManager>();
+      resourceManager.materialPool = &state.reloadArena.create_map_ct<const char*, Material, 100>();
       state.renderResources.resourceManager = &resourceManager;
 
       int idRover = rresGetResourceId(dir, "rover.bin");
       rresResourceChunk chunkRover = rresLoadResourceChunk("resources.rres", idRover);
-      Model& rover = LoadModelFromChunk(chunkRover, state.reloadArena);
+      Model& rover = LoadModelFromChunk(chunkRover, state.reloadArena, *resourceManager.materialPool, dir);
       resourceManager.roverAssets.rover = &rover;
 
       int idDriveAnimation = rresGetResourceId(dir, "rover_Drive.anim");
@@ -149,7 +150,8 @@ void init(GameState& state) {
         Cameras& cameras = state.permanentArena.create<Cameras>();
         state.renderResources.cameras = &cameras;
 
-        cameras.camera.position = Vector3{10.0f, 10.0f, 10.0f};
+        cameras.camera.position = Vector3{100.0f, 100.0f, 100.0f};
+        //TODO: decrease far plane instead of increasing scale of everything!!!
         cameras.camera.target = Vector3Zero();
         cameras.camera.projection = CAMERA_PERSPECTIVE;
         cameras.camera.up = Vector3{0.0f, 1.0f, 0.0f};
@@ -158,12 +160,12 @@ void init(GameState& state) {
         // For the shadowmapping algorithm, we will be rendering everything from the
         // light's point of view
         cameras.lightCamera.position =
-            Vector3Scale(shaders.lightDir, -15.0f);
+            Vector3Scale(shaders.lightDir, -100.0f);
         cameras.lightCamera.target = Vector3Zero();
         // Use an orthographic projection for directional lights
         cameras.lightCamera.projection = CAMERA_ORTHOGRAPHIC;
         cameras.lightCamera.up = Vector3{0.0f, 1.0f, 0.0f};
-        cameras.lightCamera.fovy = 20.0f;
+        cameras.lightCamera.fovy = 90.0f;
 
         GUI& gui = state.permanentArena.create<GUI>();
         state.renderResources.gui = &gui;

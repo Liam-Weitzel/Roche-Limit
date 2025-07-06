@@ -1,0 +1,9 @@
+Checks: '*,
+-google-readability-todo,
+'
+
+# All checks & options: https://clang.llvm.org/extra/clang-tidy/checks/list.html
+# jus as an example on how to set options here:
+CheckOptions:
+    - key:             modernize-use-nullptr.NullMacros
+      value:           NULL,CUSTOM_NULL

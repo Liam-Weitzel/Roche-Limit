@@ -2,7 +2,7 @@
 #include "game_state.h"
 
 // NOTE: Load model from chunk for use with rres
-Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena& arena) {
+Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena& arena, MapCT<const char*, Material, 100>& materialPool, rresCentralDir& dir) {
   Model& model = arena.alloc<Model>();
 
   if (!chunk.data.raw) {
@@ -219,57 +219,97 @@ Model& LoadModelFromChunk(const rresResourceChunk &chunk, Arena& arena) {
                "Failed to allocate memory for materials: %zu bytes", size);
 
     for (int i = 0; i < model.materialCount; i++) {
-      Material& material = model.materials[i];
+      const char* materialId = (const char*)(data + offset);
+      offset += sizeof(char[128]);
 
-      // Initialize material pointers
-      material.shader.locs = nullptr;
-      material.maps = nullptr;
+      LOG_TRACE("Reading Material id: %s", materialId);
 
-      unsigned char matFlags;
-      memcpy(&matFlags, data + offset, sizeof(unsigned char));
-      offset += sizeof(unsigned char);
+      if(materialPool.contains(materialId)) {
+        LOG_TRACE("Duplicate found!");
+        model.materials[i] = materialPool.get(materialId); // fetch ptr to existing material
+      } else {
+        LOG_TRACE("Creating a new material!");
 
-      // Read shader ID
-      memcpy(&material.shader.id, data + offset, sizeof(unsigned int));
-      offset += sizeof(unsigned int);
+        size_t sizeInBytes = strlen(materialId) + 1;
+        char* materialIdOnHeap = arena.alloc_raw<char>(sizeInBytes);
+        memcpy(materialIdOnHeap, materialId, sizeInBytes);
 
-      // Read shader locations
-      if (matFlags & 1) {
-        size_t size = RL_MAX_SHADER_LOCATIONS * sizeof(int);
-        material.shader.locs = arena.alloc_raw<int>(size);
-        LOG_ASSERT(material.shader.locs != nullptr,
-                   "Failed to allocate memory for shader locations: %zu bytes",
-                   size);
-        memcpy(material.shader.locs, data + offset, size);
-        offset += size;
-      }
-      // Read material maps
-      if (matFlags & 2) {
-        size_t size = MAX_MATERIAL_MAPS * sizeof(MaterialMap);
-        material.maps = arena.alloc_raw<MaterialMap>(size);
-        LOG_ASSERT(material.maps != nullptr,
-                   "Failed to allocate memory for material maps: %zu bytes",
-                   size);
+        model.materials[i] = materialPool.get(materialIdOnHeap); // create new material & return ptr
+        Material& material = model.materials[i];
+        size_t materialOffset = 0;
 
-        // Read each material map
-        for (int j = 0; j < MAX_MATERIAL_MAPS; j++) {
-          // Read texture
-          memcpy(&material.maps[j].texture, data + offset, sizeof(Texture));
-          offset += sizeof(Texture);
+        char combined[256];
+        snprintf(combined, sizeof(combined), "%s%s", materialId, ".mat");
+        int rresMaterialId = rresGetResourceId(dir, combined);
+        rresResourceChunk chunkMaterial = rresLoadResourceChunk("resources.rres", rresMaterialId);
+        const unsigned char* materialData = static_cast<const unsigned char*>(chunkMaterial.data.raw);
 
-          // Read color
-          memcpy(&material.maps[j].color, data + offset, sizeof(Color));
-          offset += sizeof(Color);
+        // Initialize material pointers
+        material.shader.locs = nullptr;
+        material.maps = nullptr;
 
-          // Read value
-          memcpy(&material.maps[j].value, data + offset, sizeof(float));
-          offset += sizeof(float);
+        unsigned char matFlags;
+        memcpy(&matFlags, materialData + materialOffset, sizeof(unsigned char));
+        materialOffset += sizeof(unsigned char);
+
+        // Read shader ID
+        memcpy(&material.shader.id, materialData + materialOffset, sizeof(unsigned int));
+        materialOffset += sizeof(unsigned int);
+
+        // Read shader locations
+        if (matFlags & 1) {
+          size_t size = RL_MAX_SHADER_LOCATIONS * sizeof(int);
+          material.shader.locs = arena.alloc_raw<int>(size);
+          memcpy(material.shader.locs, materialData + materialOffset, size);
+          materialOffset += size;
         }
-      }
+        // Read material maps
+        if (matFlags & 2) {
+          size_t size = MAX_MATERIAL_MAPS * sizeof(MaterialMap);
+          material.maps = arena.alloc_raw<MaterialMap>(size);
 
-      // Read material params (all 4 floats)
-      memcpy(&material.params, data + offset, sizeof(float) * 4);
-      offset += sizeof(float) * 4;
+          // Read each material map
+          for (int j = 0; j < MAX_MATERIAL_MAPS; j++) {
+            // Read texture
+            memcpy(&material.maps[j].texture, materialData + materialOffset, sizeof(Texture));
+            materialOffset += sizeof(Texture);
+
+            // Read color
+            memcpy(&material.maps[j].color, materialData + materialOffset, sizeof(Color));
+            materialOffset += sizeof(Color);
+
+            // Read value
+            memcpy(&material.maps[j].value, materialData + materialOffset, sizeof(float));
+            materialOffset += sizeof(float);
+
+            if(IsTextureValid(material.maps[j].texture)) {
+              long unsigned int pixelDataSize = GetPixelDataSize(material.maps[j].texture.width, material.maps[j].texture.height, material.maps[j].texture.format);
+              // Creating a local stack buffer
+              // WARNING: For large images this might be unsafe, upgrade to max size and heap allocation if needed!!
+              unsigned char pixelDataStack[1024*1024*4];
+
+              // Safety check
+              LOG_ASSERT(pixelDataSize <= sizeof(pixelDataStack), "Texture is too large...");
+
+              memcpy(pixelDataStack, materialData + materialOffset, pixelDataSize);
+              materialOffset += pixelDataSize;
+
+              Image img = {}; // Also stack?
+              img.data = &pixelDataStack;
+              img.height = material.maps[j].texture.height;
+              img.width = material.maps[j].texture.width;
+              img.format = material.maps[j].texture.format;
+              img.mipmaps = material.maps[j].texture.mipmaps;
+              material.maps[j].texture = LoadTextureFromImage(img); //atleast this is heap
+            }
+          }
+        }
+
+        // Read material params (all 4 floats)
+        memcpy(&material.params, materialData + materialOffset, sizeof(float) * 4);
+
+        rresUnloadResourceChunk(chunkMaterial);
+      }
     }
   }
 

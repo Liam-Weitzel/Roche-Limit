@@ -6,6 +6,7 @@
 #include "utils_client.h"
 #include "gui.h"
 #include "input.h"
+#include <raylib.h>
 
 struct RoverAssets { // Reload
   Model* rover = nullptr;
@@ -21,10 +22,14 @@ struct RoverAssets { // Reload
 };
 
 struct ResourceManager { // Reload
+  MapCT<const char*, Material, 100>* materialPool;
   RoverAssets roverAssets;
 
   void reload() {
-    // Don't unload models as they are freed when arena is cleared
+    UnloadModel(*roverAssets.rover);
+    UnloadModelAnimation(*roverAssets.driveAnimation);
+    UnloadModel(*roverAssets.scan);
+    //Also unload all shared materials
   }
 };
 
@@ -33,7 +38,7 @@ struct Cameras { // Permanent
   Camera3D lightCamera;
 };
 
-struct RenderResources {
+struct RenderResources { // TODO: Maybe rethink this name & what should be in resource manager vs render resources
   Cameras* cameras;                  // Permanent
   Shaders* shaders;                  // Reload
   ResourceManager* resourceManager;  // Reload
