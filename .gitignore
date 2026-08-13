@@ -2,3 +2,6 @@ libs/utils_benchmark
 .direnv/
 libs/steam/*
 !libs/steam/Readme.txt
+
+# Blender auto-backups
+*.blend1
