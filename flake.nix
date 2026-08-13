@@ -49,12 +49,12 @@
           pkgs.libGL
 
           # X11 dependencies
-          pkgs.xorg.libX11
-          pkgs.xorg.libX11.dev
-          pkgs.xorg.libXcursor
-          pkgs.xorg.libXi
-          pkgs.xorg.libXinerama
-          pkgs.xorg.libXrandr
+          pkgs.libX11
+          pkgs.libX11.dev
+          pkgs.libXcursor
+          pkgs.libXi
+          pkgs.libXinerama
+          pkgs.libXrandr
 
           # Wayland dependencies
           pkgs.wayland
