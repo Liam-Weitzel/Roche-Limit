@@ -19,6 +19,9 @@
 [submodule "client/libs/rini"]
 	path = client/libs/rini
 	url = https://github.com/raysan5/rini.git
+[submodule "client/libs/rfxgen"]
+	path = client/libs/rfxgen
+	url = https://github.com/raysan5/rfxgen
 [submodule "libs/dropper-maya_blender"]
 	path = libs/dropper-maya_blender
 	url = https://github.com/jhocking/dropper-maya_blender.git
