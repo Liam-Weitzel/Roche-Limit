@@ -1,0 +1,118 @@
+// Made with strudel.cc
+// For some reason export doesn't work on firefox -> NIXPKGS_ALLOW_UNFREE=1 nix-shell -p google-chrome
+
+// Name = second
+// Start cycle = 0
+// End cycle = 195
+// Sample rate = 30000
+// Maximum polyphony = 1024
+// Multichannel orbits = true
+
+setcpm(60/4)
+
+// ============================================================
+// DRUMS
+// ============================================================
+
+const drums1 = s("[~ ~ bd ~]")
+  .bank("tr909")
+  .dec(.55)
+  .lpf(600)
+  .gain(.05)
+
+// ============================================================
+// CHORDS
+// ============================================================
+
+const chords1 = stack(
+  note("<a c d e>"),
+  note("<c e f g>"),
+  note("<e g a b>")
+).s("sine")
+  .lpf(1000)
+  .release(1.6)
+  .gain(.08)
+
+const chords2 = stack(
+  note("<a3 c4 e4>"),
+  note("<d3 f3 a3>"),
+  note("<e3 gis3 b3>"),
+  note("<~ ~ ~>")
+)
+  .s("sine")
+  .lpf(800)
+  .release(.65)
+  .gain(0.05)
+
+// ============================================================
+// CHORD MIXERS
+// ============================================================
+
+const chordmixers1 = stack(
+  note("<[a3 ~ ~] [~ c4 e4]>"),
+  note("<[~ f3 ~] [d3 ~ a3]>"),
+  note("<[~ ~ b3] [e3 gis3 ~]>"),
+  note("<[~ c4 e4] [~ ~ ~]>")
+)
+  .s("sine")
+  .lpf(1000)
+  .attack("<0.005 0 0 0.005>")
+  .release(.65)
+  .gain(0.08)
+
+const chordmixers2 = stack(
+  note("a*4 c*4 e*4 c*4"),
+  note("b*4 d*4 b*4 d*4"),
+  note("g*4 b*4 e*4 b*4")
+)
+  .slow(2)
+  .s("sine")
+  .lpf(700)
+  .attack("<0.005 0.005 0.005 0.005>")
+  .release(.65)
+  .gain(0.07)
+
+// ============================================================
+// BASS
+// ============================================================
+
+// ============================================================
+// MELODIES
+// ============================================================
+
+// ============================================================
+// COUNTER MELODIES
+// ============================================================
+
+// ============================================================
+// SECTIONS
+// ============================================================
+
+const section1 = stack (
+  drums1,
+  chords1,
+)
+
+const section2 = stack (
+  drums1,
+  chords1,
+  chordmixers1,
+)
+
+const section3 = stack (
+  drums1,
+  chords2,
+)
+
+const section4 = stack (
+  drums1,
+  chords2,
+  chordmixers2,
+)
+
+$: arrange(
+  [4, section1],
+  [4, section2],
+  [4, section3],
+  [4, section4]
+)

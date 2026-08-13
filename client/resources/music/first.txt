@@ -1,0 +1,278 @@
+// Made with strudel.cc
+// For some reason export doesn't work on firefox -> NIXPKGS_ALLOW_UNFREE=1 nix-shell -p google-chrome
+
+// Name = first
+// Start cycle = 0
+// End cycle = 195
+// Sample rate = 30000
+// Maximum polyphony = 1024
+// Multichannel orbits = true
+
+setcpm(78/4)
+
+// ============================================================
+// DRUMS
+// ============================================================
+
+const drums1 = s("[bd ~ hh ~]*2")
+  .bank("tr909")
+  .dec(.55)
+  .lpf(600)
+  .gain(.08)
+
+const drums2 = s("[bd ~ ~ sd]*2,hh*2")
+  .bank("tr909")
+  .dec(.5)
+  .lpf(600)
+  .gain(.08)
+
+const drums3 = s("[bd ~ ~ ~]*2,hh*2")
+  .bank("tr909")
+  .dec(.55)
+  .lpf(600)
+  .gain(.08)
+
+const drums4 = s("[bd ~ [~ sd] ~]*2,[~ hh]*2")
+  .bank("tr909")
+  .dec(.1)
+  .lpf(600)
+  .gain(.08)
+
+const drums5 = s("[bd ~ ~ sd]*2,hh*4")
+  .bank("tr909")
+  .dec(.4)
+  .lpf(600)
+  .gain(.08)
+
+const drumsSparse = s("[bd ~ ~ ~]*2")
+  .bank("tr909")
+  .dec(.6)
+  .lpf(600)
+  .gain(.08)
+
+// ============================================================
+// CHORDS
+// ============================================================
+
+const chords1 = note("<[c3 eb3 g3 bb3] [ab2 c3 eb3 g3] [f2 ab2 c3 eb3] [g2 bb2 d3 f3]>")
+  .s("triangle")
+  .lpf(600)
+  .attack(.25)
+  .release(1.6)
+  .gain(.13)
+
+const chords2 = note("<[eb3 g3 bb3 d4] [f3 ab3 c4 eb4] [g3 bb3 d4 f4] [c3 eb3 g3 bb3]>")
+  .s("triangle")
+  .lpf(700)
+  .attack(.3)
+  .release(1.8)
+  .gain(.12)
+
+const chords3 = note("<[f3 ab3 c4 eb4] [g3 bb3 d4 f4] [eb3 g3 bb3 d4] [ab2 c3 eb3 g3]>")
+  .s("sine")
+  .lpf(550)
+  .attack(.4)
+  .release(2)
+  .gain(.11)
+
+const chords4 = note("<[c3 g3 bb3 eb4] [f3 c4 eb4 ab4] [ab2 eb3 g3 c4] [g2 d3 f3 bb3]>")
+  .s("triangle")
+  .lpf(650)
+  .attack(.25)
+  .release(1.5)
+  .gain(.09)
+
+const chords5 = note("<[ab2 c3 eb3 g3] [eb3 g3 bb3 d4] [f2 ab2 c3 eb3] [g2 bb2 d3 f3]>")
+  .s("sine")
+  .lpf(500)
+  .attack(.45)
+  .release(2.2)
+  .gain(.1)
+
+// ============================================================
+// BASS
+// ============================================================
+
+const bass1 = note("<c2 ~ ab1 ~>")
+  .s("sine")
+  .lpf(300)
+  .attack(.08)
+  .release(.55)
+  .gain(.13)
+
+const bass2 = note("<eb2 ~ g2 ~>")
+  .s("sine")
+  .lpf(280)
+  .attack(.08)
+  .release(.6)
+  .gain(.12)
+
+const bass3 = note("<f2 ~ eb2 ~>")
+  .s("sine")
+  .lpf(250)
+  .attack(.1)
+  .release(.65)
+  .gain(.1)
+
+const bass4 = note("<c2 ~ ab1 ~>")
+  .s("sine")
+  .lpf(320)
+  .attack(.08)
+  .release(.5)
+  .gain(.11)
+
+const bass5 = note("<ab1 ~ f2 ~>")
+  .s("sine")
+  .lpf(240)
+  .attack(.1)
+  .release(.7)
+  .gain(.09)
+
+// ============================================================
+// MELODIES
+// ============================================================
+
+const melody1 = note("c4 ~ eb4 ~ g4 ~ bb4 ~")
+  .s("sine")
+  .lpf(1000)
+  .attack(.08)
+  .release(.65)
+  .gain(.1)
+
+const melody2 = note("g4 ~ bb4 c5 ~ eb4 ~ ~")
+  .s("sine")
+  .lpf(1100)
+  .attack(.08)
+  .release(.7)
+  .gain(.09)
+
+const melody3 = note("eb4 ~ g4 ~ bb4 ~ c5 ~")
+  .s("triangle")
+  .lpf(950)
+  .attack(.1)
+  .release(.75)
+  .gain(.085)
+
+const melody4 = note("c5 ~ ~ bb4 ~ g4 ~ ~")
+  .s("sine")
+  .lpf(1300)
+  .attack(.1)
+  .release(.8)
+  .gain(.075)
+
+const melody5 = note("g4 ~ eb4 ~ bb4 ~ c5 ~")
+  .s("sine")
+  .lpf(900)
+  .attack(.1)
+  .release(.65)
+  .gain(.065)
+
+// ============================================================
+// COUNTER MELODIES
+// ============================================================
+
+const counter1 = note("~ ~ g4 ~ ~ ~ eb4 ~")
+  .s("sine")
+  .lpf(1400)
+  .attack(.08)
+  .release(.65)
+  .gain(.045)
+
+const counter2 = note("~ c5 ~ ~ g4 ~ ~ eb4")
+  .s("sine")
+  .lpf(1300)
+  .attack(.1)
+  .release(.7)
+  .gain(.04)
+
+// ============================================================
+// SECTIONS
+// ============================================================
+
+const section01 = stack(
+  chords1
+)
+
+const section02 = stack(
+  chords1,
+  bass1,
+  drums1,
+  melody1
+)
+
+const section03 = stack(
+  chords1,
+  drums2,
+  melody2
+)
+
+const section04 = stack(
+  chords2,
+  bass2,
+  drums3,
+  melody3,
+  counter1
+)
+
+const section05 = stack(
+  chords3
+)
+
+const section06 = stack(
+  chords3,
+  drumsSparse,
+  melody4
+)
+
+const section07 = stack(
+  chords4,
+  bass4,
+  drums4,
+  melody5
+)
+
+const section08 = stack(
+  chords2,
+  bass2,
+  drums5,
+  melody2,
+  counter2
+)
+
+const section09 = stack(
+  chords5,
+  counter1
+)
+
+const section10 = stack(
+  chords1,
+  bass1,
+  drums1,
+  melody1
+)
+
+const section11 = stack(
+  chords4,
+  drums3,
+  melody3,
+  counter2
+)
+
+const section12 = stack(
+  chords1
+)
+
+$: arrange(
+  [8, section01],
+  [20, section02],
+  [20, section03],
+  [20, section04],
+  [12, section05],
+  [16, section06],
+  [20, section07],
+  [20, section08],
+  [12, section09],
+  [20, section10],
+  [15, section11],
+  [12, section12]
+)
